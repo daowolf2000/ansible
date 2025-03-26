@@ -1,0 +1,21 @@
+---
+- name: Базовая настройка Proxmox
+  hosts: pve
+  become: yes
+
+  tasks:
+    - name: Установка базовых пакетов
+      apt:
+        name:
+          - git
+          - mc
+          - nvtop
+
+
+    - name: Установка необходимых пакетов для Ansible
+      apt:
+        name:
+          - python3-proxmoxer
+          - python3-requests
+
+    
