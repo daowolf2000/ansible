@@ -10,6 +10,7 @@
       vars:
         proxmox_cloudimage_template_vmid: "{{ item.vmid }}"
         proxmox_cloudimage_url: "{{ item.url }}"
+        proxmox_cloudimage_name: "{{ item.name }}"
       loop: 
         "{{ proxmox_cloudimages }}"
       tags: cloudinit

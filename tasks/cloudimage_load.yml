@@ -2,17 +2,17 @@
     # Для запуска требуется переменная proxmox_cloudimage_url
     - name: Получаем имя файла и шаблона из url
       ansible.builtin.set_fact:
-        proxmox_cloudimage_filename       : "{{ proxmox_cloudimage_url.rsplit('/', 1)[-1] }}"
-        proxmox_cloudimage_template_name  : "{{ proxmox_cloudimage_url.rsplit('/', 1)[-1].rsplit('.', 1)[0].replace('_','-').replace('.','-').replace(' ','-') }}"
+        proxmox_cloudimage_filename: "{{ proxmox_cloudimage_url.rsplit('/', 1)[-1] }}"
+        proxmox_cloudimage_name: "{{ proxmox_cloudimage_name | d(proxmox_cloudimage_url.rsplit('/', 1)[-1].rsplit('.', 1)[0].replace('_','-').replace('.','-').replace(' ','-')) }}"
 
     - name: Получаем список существующих VM
       ansible.builtin.command: qm list
       changed_when: false
       register: qmlist
 
-    - name: "Проверяем существование VM c именем {{ proxmox_cloudimage_template_name }}"
+    - name: "Проверяем существование VM c именем {{ proxmox_cloudimage_name }}"
       ansible.builtin.set_fact:
-        proxmox_cloudimage_template_existed: "{{ proxmox_cloudimage_template_name in qmlist.stdout }}"
+        proxmox_cloudimage_template_existed: "{{ proxmox_cloudimage_name in qmlist.stdout }}"
         proxmox_cloudimage_template_created: false    
 
 
@@ -37,7 +37,7 @@
 
         - name: Создаем VM
           ansible.builtin.command: >-
-            qm create {{ proxmox_cloudimage_template_vmid }} --name "{{ proxmox_cloudimage_template_name }}" --memory 2048 --cores 2 --net0 virtio,bridge=vmbr0 
+            qm create {{ proxmox_cloudimage_template_vmid }} --name "{{ proxmox_cloudimage_name }}" --memory 2048 --cores 2 --net0 virtio,bridge=vmbr0 
           changed_when: true
 
         - name: Импортируем загруженныйдиск в {{ proxmox_template_storage }} и прикрепляем его как SCSI
