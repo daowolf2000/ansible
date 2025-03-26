@@ -1,0 +1,8 @@
+# Определение каталогов
+home_dir:       "/home/{{ lookup('env', 'USER') }}"   # Домашний каталог текущего пользователя
+ans_dir:        "{{ home_dir }}/lab/ansible"          # для файлов ansible
+keys_dir:       "{{ home_dir }}/lab/ansible/keys"     # для ключей и другой чувствительной информации
+
+# Определение инфраструктуры
+ansible_ssh_private_key_file: "{{ keys_dir }}/sshkey_ansible"
+
