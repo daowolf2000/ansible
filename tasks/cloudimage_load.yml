@@ -1,0 +1,103 @@
+    # Загрузка одиночного образа
+    # Для запуска требуется переменная proxmox_cloudimage_url
+    - name: Получаем имя файла и шаблона из url
+      ansible.builtin.set_fact:
+        proxmox_cloudimage_filename       : "{{ proxmox_cloudimage_url.rsplit('/', 1)[-1] }}"
+        proxmox_cloudimage_template_name  : "{{ proxmox_cloudimage_url.rsplit('/', 1)[-1].rsplit('.', 1)[0].replace('_','-').replace('.','-').replace(' ','-') }}"
+
+    - name: Получаем список существующих VM
+      ansible.builtin.command: qm list
+      changed_when: false
+      register: qmlist
+
+    - name: "Проверяем существование VM c именем {{ proxmox_cloudimage_template_name }}"
+      ansible.builtin.set_fact:
+        proxmox_cloudimage_template_existed: "{{ proxmox_cloudimage_template_name in qmlist.stdout }}"
+        proxmox_cloudimage_template_created: false    
+
+
+    - block: ##### Скачиваем и подгружаем Cloud-init образ
+
+        - block: # Определяем vmid (если не определено)
+          - name: Получаем следующий свободный vmid
+            ansible.builtin.command: pvesh get /cluster/nextid
+            changed_when: false
+            register: nextid
+          - name: Сохраняем значение в переменную proxmox_cloudimage_template_vmid
+            ansible.builtin.set_fact:
+              proxmox_cloudimage_template_vmid: "{{ nextid.stdout }}"
+          when: not proxmox_cloudimage_template_vmid is defined
+
+        - name: Загружаем образ с интернета
+          ansible.builtin.get_url:
+            url: "{{ proxmox_cloudimage_url }}"
+            dest: "/tmp/{{ proxmox_cloudimage_filename }}"
+            # checksum: "{{ proxmox_cloudimage_hashtype }}:{{ proxmox_cloudimage_checksum }}"
+            mode: 0644
+
+        - name: Создаем VM
+          ansible.builtin.command: >-
+            qm create {{ proxmox_cloudimage_template_vmid }} --name "{{ proxmox_cloudimage_template_name }}" --memory 2048 --cores 2 --net0 virtio,bridge=vmbr0 
+          changed_when: true
+
+        - name: Импортируем загруженныйдиск в {{ proxmox_template_storage }} и прикрепляем его как SCSI
+          ansible.builtin.command: >-
+            qm disk import {{ proxmox_cloudimage_template_vmid }} 
+            /tmp/{{ proxmox_cloudimage_filename }} 
+            {{ proxmox_template_storage }} 
+            --format qcow2
+          register: qmimportdisk
+          failed_when: "'uccessfully imported disk' not in qmimportdisk.stdout"
+          changed_when: true
+
+        - name: Прикрепляем его как scsi диск
+          ansible.builtin.command: >-
+            qm set {{ proxmox_cloudimage_template_vmid }} --scsihw virtio-scsi-pci --scsi0 {{ qmimportdisk.stdout | regex_search("imported disk.*'([^']+)'", "\1") | first }}
+          changed_when: true
+
+        - name: Ограничиваем загрузку только с этого диска
+          ansible.builtin.command: >-
+            qm set {{ proxmox_cloudimage_template_vmid }} --boot c --bootdisk scsi0
+          changed_when: true
+
+        - name: Настраиваем привод cd-rom для передачи данных Cloud-Init на виртуальную машину
+          ansible.builtin.command: >-
+            qm set {{ proxmox_cloudimage_template_vmid }} --ide2 {{ proxmox_template_storage }}:cloudinit
+          changed_when: true
+
+        - name: Настраиваем последовательную консоль и используем ее в качестве дисплея (требуется для многих образов) 
+          ansible.builtin.command: >-
+            qm set {{ proxmox_cloudimage_template_vmid }} --serial0 socket --vga serial0
+          changed_when: true
+
+        - name: Настравиваем дополнительные опции (включаем агента QEMU) 
+          ansible.builtin.command: >-
+            qm set {{ proxmox_cloudimage_template_vmid }} --agent enabled=1
+          changed_when: true
+
+        - name: Конвертируем в шаблон (позволяет в дальнейшем использовать связанные клоны)
+          ansible.builtin.command: >-
+            qm template {{ proxmox_cloudimage_template_vmid }}
+          changed_when: true
+        
+        - name: store proxmox_cloudimage_template_created=true
+          ansible.builtin.set_fact:
+            proxmox_cloudimage_template_created: true
+
+      rescue:
+        - name: something failed, remove the vm that is left without a disk
+          ansible.builtin.command: >-
+            qm destroy {{ proxmox_cloudimage_template_vmid }} -destroy-unreferenced-disks 1
+          changed_when: true
+        
+        - ansible.builtin.fail:
+            msg: something wrong
+
+      always:
+        - name: clean up the temporary file
+          ansible.builtin.file:
+            path: "/tmp/{{ proxmox_cloudimage_filename }}"
+            state: absent
+          when: not proxmox_cloudimage_keep
+
+      when: not proxmox_cloudimage_template_existed
