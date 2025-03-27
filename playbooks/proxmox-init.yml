@@ -1,0 +1,26 @@
+---
+- name: Базовая настройка Proxmox
+  hosts: pve
+  become: yes
+
+  tasks:
+    - name: Установка пакетов
+      apt:  
+        name: "{{ item }}"
+      loop: "{{ proxmox_package }}"
+      tags: ['base']
+
+    - name: Загрузка cloud-init образов в Proxmox по списку
+      ansible.builtin.include_tasks: "{{ ans_dir }}/tasks/proxmox_cloudimage_load.yml"
+      vars:
+        proxmox_cloudimage_template_vmid: "{{ item.vmid }}"
+        proxmox_cloudimage_url:           "{{ item.url }}"
+        proxmox_cloudimage_name:          "{{ item.name }}"
+      loop: 
+        "{{ proxmox_cloudimages }}"
+      tags: ['cloudinit']
+
+        
+
+
+    
