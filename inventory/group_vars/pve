@@ -1,4 +1,13 @@
 ---
+proxmox_package:
+  - git
+  - gpg
+  - mc
+  - nvtop 
+  - python3-proxmoxer
+  - python3-requests
+
+
 ### Загрузка Cloud-Init образов
 proxmox_template_storage  : 'vms'  # Имя storage для создания template
 proxmox_cloudimage_keep   : false  # Сохранять ли скачанный образ после установки в каталоге /tmp
@@ -7,17 +16,17 @@ proxmox_cloudimage_keep   : false  # Сохранять ли скачанный 
 proxmox_cloudimages:
   # См. https://cloud.debian.org/images/cloud/
   - vmid:   99101
-    name:   debian-12
+    name:   template-debian-12-cloudinit
     url:    https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2
 
   # Oracle Linux - Список доступных образов смотри в https://yum.oracle.com/oracle-linux-templates.html
-  - vmid:   99201
-    name:   oracle-9
-    url:    https://yum.oracle.com/templates/OracleLinux/OL9/u4/x86_64/OL9U4_x86_64-kvm-b234.qcow2
+  # - vmid:   99201
+  #  name:   template-oracle-9
+  #  url:    https://yum.oracle.com/templates/OracleLinux/OL9/u4/x86_64/OL9U4_x86_64-kvm-b234.qcow2
   
   # Список доступных образов смотри в https://dl.astralinux.ru/ui/native/mg-generic/alse/cloudinit/
   # Также смотри статью https://docs.astra-automation.ru/1.0/misc/products/vm/ 
-  - vmid:   99301
-    name:   alse-1.8.1
-    url:    https://dl.astralinux.ru/artifactory/mg-generic/alse/cloudinit/alse-1.8.1-base-cloudinit-mg14.0.0-amd64.qcow2
+  # - vmid:   99301
+  #  name:   template-alse-1.8.1
+  #  url:    https://dl.astralinux.ru/artifactory/mg-generic/alse/cloudinit/alse-1.8.1-base-cloudinit-mg14.0.0-amd64.qcow2
     
