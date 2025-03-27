@@ -6,14 +6,11 @@
         proxmox_cloudimage_name: "{{ proxmox_cloudimage_name | d(proxmox_cloudimage_url.rsplit('/', 1)[-1].rsplit('.', 1)[0].replace('_','-').replace('.','-').replace(' ','-')) }}"
 
     - name: Получаем список существующих VM
-      ansible.builtin.command: qm list
+      ansible.builtin.shell: >-
+        qm list | awk '{print $2}' | grep -e "^{{ proxmox_cloudimage_name }}$"
       changed_when: false
-      register: qmlist
-
-    - name: "Проверяем существование VM c именем {{ proxmox_cloudimage_name }}"
-      ansible.builtin.set_fact:
-        proxmox_cloudimage_template_existed: "{{ proxmox_cloudimage_name in qmlist.stdout }}"
-        proxmox_cloudimage_template_created: false    
+      failed_when: false
+      register: _vm_name_exist
 
 
     - block: ##### Скачиваем и подгружаем Cloud-init образ
@@ -100,4 +97,4 @@
             state: absent
           when: not proxmox_cloudimage_keep
 
-      when: not proxmox_cloudimage_template_existed
+      when: _vm_name_exist.rc != 0
