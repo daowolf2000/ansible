@@ -4,9 +4,16 @@
   become: yes
 
   tasks:
+
+    - name: Обновление репозитория
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+        
     - name: Установка пакетов
       apt:  
         name: "{{ item }}"
+        state: latest
       loop: "{{ proxmox_package }}"
       tags: ['base']
 
