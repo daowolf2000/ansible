@@ -1,0 +1,78 @@
+- name: Проброс GPU Nvidia внутрь контейнера LXC
+  hosts: tag_gpu
+  become: yes
+
+  tasks:
+    - block: # Настройка параметров LXC контейнера
+      - name: Определяем мажорный номер nvidia0
+        shell: ls -al /dev/nvidia0 | grep -Po '\d+(?=,)'
+        register: _maj_nvidia0
+        changed_when: false
+
+      - name: Определяем мажорный номер nvidia-uvm
+        shell: ls -al /dev/nvidia-uvm | grep -Po '\d+(?=,)'
+        register: _maj_nvidia_uvm
+        changed_when: false
+
+      - name: Конфигурирование контейнера
+        lineinfile:
+          path: /etc/pve/lxc/{{ proxmox_vmid }}.conf
+          line: "{{ item }}"
+          state: present
+        register: res
+        loop:
+            - "lxc.cgroup2.devices.allow: c {{ _maj_nvidia0.stdout }}:* rwm"
+            - "lxc.cgroup2.devices.allow: c {{ _maj_nvidia_uvm.stdout }}:* rwm"
+            - "lxc.mount.entry: /dev/nvidia0 dev/nvidia0 none bind,optional,create=file"
+            - "lxc.mount.entry: /dev/nvidiactl dev/nvidiactl none bind,optional,create=file"
+            - "lxc.mount.entry: /dev/nvidia-uvm dev/nvidia-uvm none bind,optional,create=file"
+            - "lxc.mount.entry: /dev/nvidia-uvm-tools dev/nvidia-uvm-tools none bind,optional,create=file"
+      
+      delegate_to: pve
+
+      
+    - block:
+
+      - name: Добавление non-free репозиториев в sources.list
+        replace:
+          path: /etc/apt/sources.list
+          regexp: '^(deb .* {{ ansible_distribution_release }} main).*$'
+          replace: '\1 contrib non-free non-free-firmware'
+        register: res
+
+      - name: Обновление репозитория
+        apt:
+          update_cache: yes
+        when: res.changed
+
+      - name: Установка драйверов Nvidia
+        apt:
+          name:
+           - libnvcuvid1 
+           - libnvidia-encode1 
+           - nvidia-smi 
+           - linux-headers-amd64 
+           - nvidia-driver-bin
+
+      - name: Добавление модуля nouveau в черный список
+        lineinfile:
+          path: /etc/modprobe.d/blacklist-nouveau.conf
+          create: true
+          line: "blacklist nouveau"
+          state: present
+        
+      - name: Добавление модулей Nvidia в черный список
+        lineinfile:
+          path: /etc/modprobe.d/blacklist-nvidia.conf
+          create: true
+          line: "{{ item }}"
+          state: present
+        loop:
+          - blacklist nvidia
+          - blacklist nvidia_uvm
+          - blacklist nvidia_modeset
+          - blacklist nvidia_drm 
+
+      - name: Перезапуск контейнера
+        reboot:
+          reboot_timeout: 300
