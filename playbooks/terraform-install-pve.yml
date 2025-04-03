@@ -1,0 +1,66 @@
+- name: Настройка Proxmox для Terraform
+  hosts: pve
+  become: yes
+
+  tasks:
+    - name: Configure Proxmox roles
+      proxmox_role:
+        name: Terraform
+        privileges: 
+          - "Datastore.AllocateSpace" 
+          - "Datastore.Audit" 
+          - "Pool.Allocate"
+          - "Sys.Audit" 
+          - "Sys.Console" 
+          - "Sys.Modify"
+          - "VM.Allocate"
+          - "VM.Audit"
+          - "VM.Clone"
+          - "VM.Config.CDROM"
+          - "VM.Config.Cloudinit" 
+          - "VM.Config.CPU" 
+          - "VM.Config.Disk"
+          - "VM.Config.HWType"
+          - "VM.Config.Memory"
+          - "VM.Config.Network"
+          - "VM.Config.Options"
+          - "VM.Migrate"
+          - "VM.Monitor"
+          - "VM.PowerMgmt"
+          - "SDN.Use"
+        state: present
+
+    - name: Configure Proxmox user accounts
+      proxmox_user:
+        name: terraform@pve
+      register: _new_user
+
+    - name: Configure Proxmox ACLs
+      proxmox_acl:
+        path: /
+        roles: [ "Terraform" ]
+        users: [ "terraform@pve" ]
+        state: present
+
+    - name: Create Authentication Token
+      when: _new_user.changed
+      block:
+      - name: Generate Terraform Authentication Token
+        ansible.builtin.command:
+          cmd: pveum user token add terraform@pve terraform-token --privsep=0 --noborder --noheader
+        changed_when: false
+        register: token_output
+
+      - name: Extract Full Token ID and Secret from Output
+        ansible.builtin.set_fact:
+          full_token_id: "{{ token_output.stdout_lines[0].split()[1].strip() }}"
+          secret: "{{ token_output.stdout_lines[2].split()[1].strip() }}"
+
+      # FIXME: Прописать путь сохранения токена
+      - name: Export Environment Variables on Terraform Machine
+        ansible.builtin.shell: |
+          echo 'export PM_API_TOKEN_ID="{{ full_token_id }}"' >> ~/.test
+          echo 'export PM_API_TOKEN_SECRET="{{ secret }}"' >> ~/.test
+        changed_when: false
+        delegate_to: localhost
+      

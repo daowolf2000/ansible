@@ -1,0 +1,58 @@
+---
+- name: Установка terrafom на localhost
+  hosts: localhost
+
+  tasks:
+
+  - name: Copy terrafom bin
+    ansible.builtin.copy:
+      src:    dist/terraform
+      dest:   "{{ terraform_dir }}"
+      mode:   0755
+    tags: terraform
+  
+  - name: Install autocomplete
+    ansible.builtin.command: terraform -install-autocomplete
+    register: res
+    changed_when: res.rc == 0 
+    failed_when:  false
+    tags: terraform
+
+
+  - name: Install Golang
+    ansible.builtin.apt:
+      package:
+        - golang
+    become: true
+
+  - name: Install terraform provider for proxmox
+    tags: proxmox
+    block:
+      - name: Create directory for repo
+        ansible.builtin.file: 
+          path:   "{{ repo_dir }}/.terraform.d/plugins/registry.terraform.io/telmate/proxmox/2.9.14/linux_amd64/"
+          state:  directory
+          mode:   0755
+      - name: Clone from git
+        ansible.builtin.git:
+          repo: "https://github.com/Telmate/terraform-provider-proxmox"
+          dest: "{{ repo_dir }}/terraform-provider-proxmox"
+          version: v2.9.14
+          update: yes
+        register: res
+      - name: Run the Makefile
+        community.general.make:
+          chdir: "{{ repo_dir }}/terraform-provider-proxmox"
+        when: res is changed
+      - name: Create Terraform plugins directory
+        ansible.builtin.file: 
+          path:   "{{ home_dir }}/.terraform.d/plugins/registry.terraform.io/telmate/proxmox/2.9.14/linux_amd64/"
+          state:  directory
+          mode:   0755
+      - name: Copy plugin for Proxmox
+        ansible.builtin.copy:
+          src:  "{{ repo_dir }}/terraform-provider-proxmox/bin/terraform-provider-proxmox" 
+          dest: "{{ home_dir }}/.terraform.d/plugins/registry.terraform.io/telmate/proxmox/2.9.14/linux_amd64/"
+          mode: 0755
+    
+
