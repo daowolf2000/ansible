@@ -2,28 +2,38 @@
     # Для запуска требуется переменная proxmox_cloudimage_url
     - name: Получаем имя файла и шаблона из url
       ansible.builtin.set_fact:
-        proxmox_cloudimage_filename: "{{ proxmox_cloudimage_url.rsplit('/', 1)[-1] }}"
-        proxmox_cloudimage_name: "{{ proxmox_cloudimage_name | d(proxmox_cloudimage_url.rsplit('/', 1)[-1].rsplit('.', 1)[0].replace('_','-').replace('.','-').replace(' ','-')) }}"
+        proxmox_cloudimage_filename       : "{{ proxmox_cloudimage_url.rsplit('/', 1)[-1] }}"
+        proxmox_cloudimage_template_name  : "{{ proxmox_cloudimage_url.rsplit('/', 1)[-1].rsplit('.', 1)[0].replace('_', '-').replace('.', '-').replace(' ', '-') }}"
 
     - name: Получаем список существующих VM
-      ansible.builtin.shell: >-
-        qm list | awk '{print $2}' | grep -e "^{{ proxmox_cloudimage_name }}$"
+      ansible.builtin.command: qm list
       changed_when: false
-      failed_when: false
-      register: _vm_name_exist
+      register: qmlist
+
+    - name: "Проверяем существование VM c именем {{ proxmox_cloudimage_template_name }}"
+      ansible.builtin.set_fact:
+        proxmox_cloudimage_template_existed: "{{ proxmox_cloudimage_template_name in qmlist.stdout }}"
+        proxmox_cloudimage_template_created: false    
 
 
-    - block: ##### Скачиваем и подгружаем Cloud-init образ
+    - name: Скачиваем и подгружаем Cloud-init образ
+      when: not proxmox_cloudimage_template_existed
+      block: 
 
-        - block: # Определяем vmid (если не определено)
+        - name: Определяем vmid (если не определено)
+          when: not proxmox_cloudimage_template_vmid is defined
+          block: 
+          
           - name: Получаем следующий свободный vmid
             ansible.builtin.command: pvesh get /cluster/nextid
             changed_when: false
             register: nextid
+          
           - name: Сохраняем значение в переменную proxmox_cloudimage_template_vmid
             ansible.builtin.set_fact:
               proxmox_cloudimage_template_vmid: "{{ nextid.stdout }}"
-          when: not proxmox_cloudimage_template_vmid is defined
+          
+          
 
         - name: Загружаем образ с интернета
           ansible.builtin.get_url:
@@ -34,10 +44,10 @@
 
         - name: Создаем VM
           ansible.builtin.command: >-
-            qm create {{ proxmox_cloudimage_template_vmid }} --name "{{ proxmox_cloudimage_name }}" --memory 2048 --cores 2 --net0 virtio,bridge=vmbr0 
+            qm create {{ proxmox_cloudimage_template_vmid }} --name "{{ proxmox_cloudimage_template_name }}" --memory 2048 --cores 2 --net0 virtio,bridge=vmbr0 
           changed_when: true
 
-        - name: Импортируем загруженныйдиск в {{ proxmox_template_storage }} и прикрепляем его как SCSI
+        - name: Импортируем загруженныйдиск и прикрепляем его как SCSI
           ansible.builtin.command: >-
             qm disk import {{ proxmox_cloudimage_template_vmid }} 
             /tmp/{{ proxmox_cloudimage_filename }} 
@@ -77,24 +87,25 @@
             qm template {{ proxmox_cloudimage_template_vmid }}
           changed_when: true
         
-        - name: store proxmox_cloudimage_template_created=true
+        - name: Store proxmox_cloudimage_template_created=true
           ansible.builtin.set_fact:
             proxmox_cloudimage_template_created: true
 
       rescue:
-        - name: something failed, remove the vm that is left without a disk
+        - name: Something failed, remove the vm that is left without a disk
           ansible.builtin.command: >-
             qm destroy {{ proxmox_cloudimage_template_vmid }} -destroy-unreferenced-disks 1
           changed_when: true
         
-        - ansible.builtin.fail:
+        - name: Exception fail
+          ansible.builtin.fail:
             msg: something wrong
 
       always:
-        - name: clean up the temporary file
+        - name: Clean up the temporary file
           ansible.builtin.file:
             path: "/tmp/{{ proxmox_cloudimage_filename }}"
             state: absent
           when: not proxmox_cloudimage_keep
 
-      when: _vm_name_exist.rc != 0
+      

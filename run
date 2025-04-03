@@ -1,0 +1,10 @@
+#!/bin/bash
+ANSIBLE_DIR=$(dirname "$(readlink -f "${BASH_SOURCE}")")
+ANSIBLE_CONFIG=${ANSIBLE_DIR}/ansible.cfg
+source ${ANSIBLE_DIR}/.venv/bin/activate
+source ${ANSIBLE_DIR}/keys/env
+ansible-playbook -i ${ANSIBLE_DIR}/inventory/hosts.ini ${ANSIBLE_DIR}/playbooks/$1
+# TODO: Добавить bash-autocomplete
+
+
+deactivate

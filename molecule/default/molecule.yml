@@ -1,0 +1,31 @@
+---
+driver:
+  name: docker
+platforms:
+  - name: "molecule-rocky9-${CI_JOB_ID}"
+    image: geerlingguy/docker-rockylinux9-ansible:latest
+    privileged: true
+    pre_build_image: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    cgroupns_mode: host
+    command: /usr/sbin/init
+provisioner:
+  name: ansible
+  lint:
+    ansible-lint
+  env:
+    ANSIBLE_CONFIG: ../../../../ansible.cfg
+  inventory:
+    group_vars:
+      all:
+        ansible_python_interpreter: /usr/bin/python3.9
+        systemd_units:
+          - name: mnt-lab.mount
+            options:
+              Mount:
+                  What: 192.168.1.200:/
+                  Where: /mnt/lab
+                  Type: nfs4
+                  Options: _netdev,auto
+                  TimeoutSec: 10

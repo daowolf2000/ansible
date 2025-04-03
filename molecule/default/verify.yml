@@ -1,0 +1,14 @@
+---
+- name: Verify
+  hosts: all
+  tasks:
+    - name: Check systemd unit create
+      ansible.builtin.lineinfile:
+        path: /etc/systemd/system/mnt-lab.mount
+        line: "WantedBy=multi-user.target"
+        state: present
+      check_mode: true
+      register: res
+      failed_when: (res is changed) or (res is failed)
+
+

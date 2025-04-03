@@ -2,15 +2,17 @@
 # Данный плейбук только для deb-систем
 
 - name: Defiane DEB arch
-  shell: dpkg --print-architecture
+  ansible.builtin.command: dpkg --print-architecture
+  changed_when: false
   register: _deb_arch
 
 - name: Define os codename
-  shell: . /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}"
+  ansible.builtin.command: . /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}"
+  changed_when: false
   register: _os_codename
 
 - name: Ensure pre-requisites are installed
-  apt:
+  ansible.builtin.apt:
     name:
       - ca-certificates
       - curl
@@ -20,26 +22,27 @@
     update_cache: yes
 
 - name: Create directory for Docker GPG keyring
-  file:
+  ansible.builtin.file:
     path: /etc/apt/keyrings
     state: directory
     mode: '0755'
 
 
 - name: Download and install Docker's official GPG key
-  get_url:
+  ansible.builtin.get_url:
     url: https://download.docker.com/linux/debian/gpg
     dest: /etc/apt/keyrings/docker.asc
     mode: '0644'
 
 # Добавляем репозиторий Docker в источники APT
 - name: Add Docker repository to Apt sources
-  blockinfile:
+  ansible.builtin.blockinfile:
     path: /etc/apt/sources.list.d/docker.list
     create: true
     block: |
       deb [arch={{ _deb_arch.stdout }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ distro_map[ansible_distribution] }} {{ _os_codename.stdout }} stable
     marker: "# {mark} Ansible managed block for Docker repo"
+    mode: '0644'
   vars:
     distro_map:
       Linux Mint: ubuntu
@@ -47,11 +50,11 @@
       Debian:     debian
 
 - name: Update apt sources
-  apt:
+  ansible.builtin.apt:
     update_cache: yes
 
 - name: Install Docker Engine and related packages
-  apt:
+  ansible.builtin.apt:
     name:
       - docker-ce
       - docker-ce-cli
@@ -60,13 +63,14 @@
       - docker-compose-plugin
     state: present
 
-- name: Test Docker installation
-  command: docker run hello-world
-  register: docker_test
-  failed_when: docker_test.rc != 0
-
 - name: Enable Docker to start at boot
-  systemd:
+  ansible.builtin.systemd:
     name: docker
     enabled: true
     state: started
+
+- name: Test Docker installation
+  ansible.builtin.command: docker run hello-world
+  register: docker_test
+  changed_when: false
+  failed_when: docker_test.rc != 0
