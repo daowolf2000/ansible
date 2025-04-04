@@ -1,18 +1,20 @@
 ---
 - name: Установка terrafom на localhost
   hosts: localhost
+  vars:
+    terraform_dir: "{{ playbook_dir }}/../terraform"
 
   tasks:
 
-  - name: Copy terrafom bin
-    ansible.builtin.copy:
-      src:    dist/terraform
-      dest:   "{{ terraform_dir }}"
-      mode:   0755
-    tags: terraform
+  # - name: Copy terrafom bin
+  #   ansible.builtin.copy:
+  #     src:    dist/terraform
+  #     dest:   "{{ terraform_dir }}"
+  #     mode:   0755
+  #   tags: terraform
   
   - name: Install autocomplete
-    ansible.builtin.command: terraform -install-autocomplete
+    ansible.builtin.command: "{{ terraform_dir }}/terraform -install-autocomplete"
     register: res
     changed_when: res.rc == 0 
     failed_when:  false
@@ -25,34 +27,48 @@
         - golang
     become: true
 
+  - name: Check Proxmox plugin exists
+    ansible.builtin.file:
+      path: "{{ terraform_dir }}/.terraform.d/plugins/registry.terraform.io/telmate/proxmox/2.9.14/linux_amd64/terraform-provider-proxmox"
+      state: file
+    check_mode: yes
+    changed_when: false
+    register: _proxmox_plugin_exists
+
+
   - name: Install terraform provider for proxmox
     tags: proxmox
+    when: _proxmox_plugin_exists is changed
     block:
       - name: Create directory for repo
         ansible.builtin.file: 
-          path:   "{{ repo_dir }}/.terraform.d/plugins/registry.terraform.io/telmate/proxmox/2.9.14/linux_amd64/"
+          path:   "{{ terraform_dir }}/.terraform.d/plugins/registry.terraform.io/telmate/proxmox/2.9.14/linux_amd64/"
           state:  directory
           mode:   0755
       - name: Clone from git
         ansible.builtin.git:
           repo: "https://github.com/Telmate/terraform-provider-proxmox"
-          dest: "{{ repo_dir }}/terraform-provider-proxmox"
+          dest: "/tmp/terraform-provider-proxmox"
           version: v2.9.14
           update: yes
         register: res
       - name: Run the Makefile
         community.general.make:
-          chdir: "{{ repo_dir }}/terraform-provider-proxmox"
+          chdir: "/tmp/terraform-provider-proxmox"
         when: res is changed
       - name: Create Terraform plugins directory
         ansible.builtin.file: 
-          path:   "{{ home_dir }}/.terraform.d/plugins/registry.terraform.io/telmate/proxmox/2.9.14/linux_amd64/"
+          path:   "{{ terraform_dir }}/.terraform.d/plugins/registry.terraform.io/telmate/proxmox/2.9.14/linux_amd64/"
           state:  directory
           mode:   0755
       - name: Copy plugin for Proxmox
         ansible.builtin.copy:
-          src:  "{{ repo_dir }}/terraform-provider-proxmox/bin/terraform-provider-proxmox" 
-          dest: "{{ home_dir }}/.terraform.d/plugins/registry.terraform.io/telmate/proxmox/2.9.14/linux_amd64/"
+          src:  "/tmp/terraform-provider-proxmox/bin/terraform-provider-proxmox" 
+          dest: "{{ terraform_dir }}/.terraform.d/plugins/registry.terraform.io/telmate/proxmox/2.9.14/linux_amd64/"
           mode: 0755
+      - name: Delete temp folders
+        ansible.builtin.file:
+          path: "/tmp/terraform-provider-proxmox"
+          state: absent
     
 

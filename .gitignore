@@ -5,3 +5,4 @@ __pycache__
 test*
 keys/
 .ansible/
+terraform/.terraform.d/
