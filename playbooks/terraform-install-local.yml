@@ -1,10 +1,11 @@
 ---
 - name: Установка terrafom на localhost
   hosts: localhost
-  vars:
-    terraform_dir: "{{ playbook_dir }}/../terraform"
-
   tasks:
+
+  - name: Set facts
+    ansible.builtin.set_fact:
+      terraform_dir: "{{ terraform_dir | default(playbook_dir + '/../terraform') }}"
 
   # - name: Copy terrafom bin
   #   ansible.builtin.copy:
