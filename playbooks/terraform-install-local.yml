@@ -7,21 +7,12 @@
     ansible.builtin.set_fact:
       terraform_dir: "{{ terraform_dir | default(playbook_dir + '/../terraform') }}"
 
-<<<<<<< HEAD
-  # - name: Copy terrafom bin
-  #   ansible.builtin.copy:
-  #     src:    dist/terraform
-  #     dest:   "{{ terraform_dir }}"
-  #     mode:   0755
-  #   tags: terraform
-=======
   - name: Copy terrafom bin
     ansible.builtin.copy:
       src:    ../terraform/terraform
       dest:   "{{ terraform_dir }}"
       mode:   0755
     tags: terraform
->>>>>>> e9f43bd4 (fix(terraform-local): add default terraform_dir)
   
   - name: Install autocomplete
     ansible.builtin.command: "{{ terraform_dir }}/terraform -install-autocomplete"
