@@ -13,3 +13,4 @@ pip install -r requirements.txt
 ```
 
 TODO: Импорт в плейбуки файла с переменными (keys/vars.yml)
+TODO: Тесты для существующих плейбуков (Molecule)
