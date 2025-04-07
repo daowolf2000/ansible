@@ -1,0 +1,45 @@
+---
+- name: Configure Proxmox VE
+  hosts: pve
+  become: yes
+  vars:
+    package:
+      - sudo
+      - git
+      - gpg
+      - mc
+      - python3-proxmoxer
+      - python3-requests   
+      - nvidia-driver
+      - nvtop
+
+
+  pre_tasks:
+
+    - name: Add non-free repo in sources.list
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list
+        regexp: '^(deb .* {{ ansible_distribution_release }} main).*$'
+        replace: '\1 contrib non-free non-free-firmware'
+      register: res
+
+    - name: Update apt cache # noqa: no-handler
+      ansible.builtin.apt:
+        update_cache: yes
+      when: res.changed 
+
+    - name: Install base package
+      ansible.builtin.apt:  
+        name: "{{ package }}"
+        state: present
+        update_cache: yes
+        cache_valid_time: 3600
+  
+  tasks:
+
+  post_tasks:
+
+  handlers:
+
+
+

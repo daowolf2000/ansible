@@ -1,0 +1,14 @@
+---
+- name: Create Proxmox Token
+  when: _new_user.changed
+  block:
+  - name: Generate Terraform Authentication Token
+    ansible.builtin.command:
+      cmd: "pveum user token add {{ terraform_proxmox_user }} terraform-token --privsep=0 --noborder --noheader"
+    changed_when: false
+    register: token_output
+
+  - name: Extract Full Token ID and Secret from Output
+    ansible.builtin.set_fact:
+      full_token_id: "{{ token_output.stdout_lines[0].split()[1].strip() }}"
+      secret: "{{ token_output.stdout_lines[2].split()[1].strip() }}"

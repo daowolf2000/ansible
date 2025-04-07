@@ -1,0 +1,26 @@
+---
+- name: Настройка ноутбука
+  hosts: localhost
+  vars: 
+    package:
+      - jq
+
+  tasks:
+
+  - name: Установка пакетов
+    tags: [ base, install ]
+    ansible.builtin.apt:
+      name: "{{ package }}"
+      update_cache: yes
+      cache_valid_time: 3600
+    become: yes
+    
+
+  - name: Установка Terraform
+    tags: [ terraform, install ]
+    ansible.builtin.import_tasks: tasks/terraform_install.yml
+
+  - name: Установка Docker
+    tags: [ docker, install ]
+    ansible.builtin.import_tasks: tasks/docker_install.yml
+      
