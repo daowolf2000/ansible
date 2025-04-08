@@ -1,4 +1,12 @@
 ---
+- name: Initialization variables
+  ansible.builtin.set_fact:
+    _nvidia_package:
+      - libnvcuvid1 
+      - libnvidia-encode1 
+      - nvidia-smi 
+      - linux-headers-amd64 
+      - nvidia-driver-bin
 
 - name: Настройка параметров LXC контейнера
   notify: Reboot
@@ -38,42 +46,33 @@
       path: /etc/apt/sources.list
       regexp: '^(deb .* {{ ansible_distribution_release }} main).*$'
       replace: '\1 contrib non-free non-free-firmware'
-    register: res
+    register: _source_update
 
   - name: Обновление репозитория
     ansible.builtin.apt:
       update_cache: yes
-    when: res.changed  # noqa: no-handler
+    when: _source_update is changed 
 
   - name: Установка драйверов Nvidia
     ansible.builtin.apt:
-      name:
-        - libnvcuvid1 
-        - libnvidia-encode1 
-        - nvidia-smi 
-        - linux-headers-amd64 
-        - nvidia-driver-bin
+      name: "{{ _nvidia_package }}"
 
   - name: Добавление модуля nouveau в черный список
-    ansible.builtin.lineinfile:
-      path: /etc/modprobe.d/blacklist-nouveau.conf
-      create: true
-      line: "blacklist nouveau"
-      state: present
-      mode: "0644"
+    ansible.builtin.copy:
+      content: |
+        blacklist nouveau
+      dest: /etc/modprobe.d/blacklist-nouveau.conf
+      mode: 0644
     
   - name: Добавление модулей Nvidia в черный список
-    ansible.builtin.lineinfile:
-      path: /etc/modprobe.d/blacklist-nvidia.conf
-      create: true
-      line: "{{ item }}"
-      state: present
-      mode: "0644"
-    loop:
-      - blacklist nvidia
-      - blacklist nvidia_uvm
-      - blacklist nvidia_modeset
-      - blacklist nvidia_drm 
+    ansible.builtin.copy:
+      content: |
+        blacklist nvidia
+        blacklist nvidia_uvm
+        blacklist nvidia_modeset
+        blacklist nvidia_drm 
+      dest: /etc/modprobe.d/blacklist-nvidia.conf
+      mode: 0644
 
 
   

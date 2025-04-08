@@ -1,0 +1,6 @@
+---
+- name: Set authorized key for "{{ username }}"
+  ansible.posix.authorized_key:
+    user:   "{{ username | default('root') }}"
+    state:  "{{ state | default('present') }}"
+    key:    "{{ sshkey | default(lookup('file', lookup('env', 'HOME') + '/.ssh/id_ed25519.pub')) }}"

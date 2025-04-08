@@ -7,6 +7,7 @@
       - 'mp0: /mnt/lab,mp=/mnt/lab'
 
 
+
   tasks:
 
   - name: Add mount point to LXC config
@@ -20,14 +21,13 @@
     notify: Reboot
 
   - name: Install docker-ce
-    ansible.builtin.import_tasks: tasks/docker-install.yml
+    ansible.builtin.import_tasks: tasks/docker_install.yml
     when: "'docker' in proxmox_tags_parsed"
 
   - name: GPU Passthru
-    ansible.builtin.import_tasks: tasks/lxc-gpu-passthru.yml
+    ansible.builtin.import_tasks: tasks/lxc_gpu_passthru.yml
     when: "'gpu' in proxmox_tags_parsed"
 
-      
 
 
   handlers:

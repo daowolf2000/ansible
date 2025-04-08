@@ -2,12 +2,13 @@
 # Установка и настройка Terraform (используя зеркало Яндекса)
 
 - name: Initialization variables
-  ansible.builtin.set_fact:
-    terraform_bin_dir   : "{{ terraform_bin_dir | default('/usr/local/bin') }}"
-    terraform_repo      : "{{ terraform_repo | default('https://hashicorp-releases.yandexcloud.net/terraform') }}"
-    terraform_arch      : "{{ terraform_arch | default('linux_amd64') }}"
-    terraform_ver       : "{{ terraform_ver | default('1.11.3') }}"
-    terraform_user      : "{{ terraform_user | default(ansible_user_id) }}"
+  ansible.builtin.set_fact: # noqa jinja[spacing]
+    x_path      : "{{ terraform_path   | default('/usr/local/bin') }}"
+    x_repo      : "{{ terraform_repo   | default('https://hashicorp-releases.yandexcloud.net/terraform') }}"
+    x_arch      : "{{ terraform_arch   | default('linux_amd64') }}"
+    x_ver       : "{{ terraform_ver    | default('1.11.3') }}"
+    x_user      : "{{ terraform_user   | default(ansiblex_user_id) }}"
+    x_mirror    : "{{ terraform_mirror | default('https://terraform-mirror.yandexcloud.net/') }}"
 
 - name: Install required
   ansible.builtin.apt:
@@ -16,31 +17,31 @@
 
 - name: Check terraform install and version
   ansible.builtin.shell: |
-    set -o pipefail ; terraform version -json | jq -r '.terraform_version'
+    set -o pipefail ; terraform version -json | jq -r '.terraformx_version'
   args:
     executable: /bin/bash
   changed_when: false
   failed_when: false
-  register: _terraform_current_version
+  register: o_cur_ver
 
 - name: Debug
   ansible.builtin.debug:
-    msg: "{{ _terraform_current_version.stdout }} != {{ terraform_ver }} =>> {{ _terraform_current_version.stdout != terraform_ver }}"
-    verbosity: 3
+    msg: "{{ o_cur_ver.stdout }} != {{ x_ver }} =>> {{ o_cur_ver.stdout != x_ver }}"
+    verbosity: 1
 
 - name: Install Terraform
   tags: [ terraform, install ]
-  when: _terraform_current_version is failed or _terraform_current_version.stdout != terraform_ver
+  when: o_cur_ver is failed or o_cur_ver.stdout != x_ver
   block: 
     - name: Download hash file
       ansible.builtin.get_url:
-        url: "{{ terraform_repo }}/{{ terraform_ver }}/terraform_{{ terraform_ver }}_SHA256SUMS"
-        dest: /tmp/terraform_{{ terraform_ver }}_SHA256SUMS
+        url: "{{ x_repo }}/{{ x_ver }}/terraform_{{ x_ver }}_SHA256SUMS"
+        dest: /tmp/terraform_{{ x_ver }}_SHA256SUMS
         mode: 0644
 
     - name: Get hash sum
       ansible.builtin.shell: |
-        set -o pipefail ; grep terraform_{{ terraform_ver }}_{{ terraform_arch }}.zip /tmp/terraform_1.11.3_SHA256SUMS | awk '{print $1}'
+        set -o pipefail ; grep terraform_{{ x_ver }}_{{ x_arch }}.zip /tmp/terraform_1.11.3_SHA256SUMS | awk '{print $1}'
       args:
         executable: /bin/bash
       changed_when: false
@@ -48,64 +49,50 @@
 
     - name: Download Terraform binary
       ansible.builtin.get_url:
-        url: "{{ terraform_repo }}/{{ terraform_ver }}/terraform_{{ terraform_ver }}_{{ terraform_arch }}.zip"
-        dest: /tmp/terraform_{{ terraform_ver }}_{{ terraform_arch }}.zip
+        url: "{{ x_repo }}/{{ x_ver }}/terraform_{{ x_ver }}_{{ x_arch }}.zip"
+        dest: /tmp/terraform_{{ x_ver }}_{{ x_arch }}.zip
         mode: 0644
         checksum: "sha256:{{ _hash_sum.stdout }}"
 
     - name: Unzip Terraform archive
       ansible.builtin.unarchive:
-        src: /tmp/terraform_{{ terraform_ver }}_{{ terraform_arch }}.zip
-        dest: "{{ terraform_bin_dir }}"
+        src: /tmp/terraform_{{ x_ver }}_{{ x_arch }}.zip
+        dest: "{{ x_path }}"
         remote_src: yes
         mode: 0755
       become: yes
 
-    # - name: Install autocomplete
-    #   ansible.builtin.command: "{{ terraform_bin_dir }}/terraform -install-autocomplete"
-    #   register: res
-    #   changed_when: res.rc == 0 
-    #   failed_when:  false
-
     - name: Delete temp file
       ansible.builtin.command:
-        "rm /tmp/terraform_{{ terraform_ver }}*"
-      register: res
-      changed_when: res not failed
+        "rm /tmp/terraform_{{ x_ver }}*"
+      register: _res_deltemp
+      changed_when: _res_deltemp not failed
 
-- name: Configure Terraform for user {{ terraform_user }}
+- name: Configure Terraform for user {{ x_user }}
   block: 
 
-  # - name: Get home dir for user {{ terraform_user }}
-  #   ansible.builtin.shell: |
-  #    set -o pipefail ; getent passwd {{ terraform_user }} | awk -F: '{print $6}'
-  #   args:
-  #     executable: /bin/bash
-  #   changed_when: false
-  #   register: _home_dir
-
-  - name: Get home dir for user {{ terraform_user }}
-    ansible.builtin.include_tasks: get_home_dir.yml
+  - name: Get userinfo
+    ansible.builtin.include_tasks: getx_userinfo.yml
     vars:
-      username: "{{ terraform_user }}"
+      username: "{{ x_user }}"
       
 
   - name: Install autocomplete
     ansible.builtin.lineinfile:
-      path: "{{ _home_dir.stdout }}/.bashrc"
-      line: complete -C /usr/local/bin/terraform terraform
+      path: "{{ getx_userinfo.home_dir }}/.bashrc"
+      line: "complete -C {{ x_path }}/terraform terraform"
 
   - name: Configure Yandex mirror for terraform
     ansible.builtin.copy:
       content: |
         provider_installation {
-          network_mirror {
-            url     = "https://terraform-mirror.yandexcloud.net/"
+          networkx_mirror {
+            url     = "{{ x_mirror }}"
             include = ["registry.terraform.io/*/*"]
           }
           direct {
             exclude = ["registry.terraform.io/*/*"]
           }
         }
-      dest: "{{ _home_dir.stdout }}/.terraformrc"
+      dest: "{{ getx_userinfo.home_dir }}/.terraformrc"
       mode: 0644

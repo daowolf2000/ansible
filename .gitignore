@@ -4,5 +4,6 @@ __pycache__
 .venv/
 test*
 keys/
+secret_vault/
 .ansible/
 terraform/.terraform.d/

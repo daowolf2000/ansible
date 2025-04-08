@@ -2,7 +2,17 @@
 # Данный плейбук только для deb-систем
 - name: Initialization variables
   ansible.builtin.set_fact:
-    docker_user         : "{{ docker_user | default(ansible_user_id) }}"
+    _username: "{{ username | default(ansible_user_id) }}"
+    _package_req:
+      - ca-certificates
+      - curl
+      - gnupg
+    _package:       
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose
+      - docker-compose-plugin
 
 - name: Defiane DEB arch
   ansible.builtin.command: |
@@ -20,10 +30,7 @@
 
 - name: Ensure pre-requisites are installed
   ansible.builtin.apt:
-    name:
-      - ca-certificates
-      - curl
-      - gnupg
+    name: "{{ _package_req }}" 
     state: present
   become: yes
 
@@ -55,23 +62,18 @@
       Linux Mint: ubuntu
       Ubuntu:     ubuntu
       Debian:     debian
-  register: res
+  register: _source_update
   become: yes
 
 - name: Update apt sources
   ansible.builtin.apt:
     update_cache: yes
-  when: res is changed
+  when: _source_update is changed
   become: yes
 
 - name: Install Docker Engine and related packages
   ansible.builtin.apt:
-    name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      - docker-compose
-      - docker-compose-plugin
+    name: "{{ _package }}"
     state: present
   become: yes
 
@@ -82,16 +84,15 @@
     state: started
   become: yes
 
-
 - name: Add user to the docker group
   ansible.builtin.user:
-    name: "{{ docker_user }}"
+    name: "{{ _username }}"
     groups: docker
     append: yes
   become: yes
 
 - name: Test Docker installation
   ansible.builtin.command: docker run hello-world
-  register: docker_test
+  register: _docker_test
   changed_when: false
-  failed_when: docker_test.rc != 0
+  failed_when: _docker_test.rc != 0
