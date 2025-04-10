@@ -3,22 +3,22 @@
 
 - name: Initialization variables
   ansible.builtin.set_fact:
-    _username: "{{ username | default(ansible_user_id) }}"
+    x_username: "{{ x_username | default(ansible_user_id) }}"
 
-- name: Get home dir for user "{{ _username }}"
+- name: Get home dir for user "{{ x_username }}"
   ansible.builtin.shell: |
-    set -o pipefail ; getent passwd {{ _username }} | awk -F: '{print $6}'
+    set -o pipefail ; getent passwd {{ x_username }} | awk -F: '{print $6}'
   args:
     executable: /bin/bash
   changed_when: false
-  register: _home_dir
+  register: x_home_dir
 
-- name: Set output variable get_userinfo
+- name: Set output variable o_userinfo
   ansible.builtin.set_fact:
-    get_userinfo: 
-      home_dir: "{{ _home_dir.stdout }}"
+    o_userinfo: 
+      home_dir: "{{ x_home_dir.stdout }}"
 
 - name: Debug
   ansible.builtin.debug:
-    var: get_userinfo
+    var: o_userinfo
     verbosity: 1

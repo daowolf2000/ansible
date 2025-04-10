@@ -1,115 +1,121 @@
-    # Загрузка одиночного образа
-
-    - name: Initialization variables
-      ansible.builtin.set_fact:
-        _vmid     : "{{ vmid | default(omit) }}"
-        _url      : "{{ url | default(omit) }}"
-        _vmname   : "{{ vmname | default(_url.rsplit('/', 1)[-1].rsplit('.', 1)[0].replace('_', '-').replace('.', '-').replace(' ', '-')) }}"
-        _filename : "{{ _url.rsplit('/', 1)[-1] }}"
-        _storage  : "{{ proxmox_storage | default('vms') }}"
-        _keep     : "{{ keep | default(false) }}"
-
-    - name: Получаем список существующих VM
-      ansible.builtin.command: qm list
-      changed_when: false
-      register: qmlist
-
-    - name: "Проверяем существование VM c именем {{ _vmname }}"
-      ansible.builtin.set_fact:
-        _template_existed: "{{ _vmname in qmlist.stdout }}"
-        _template_created: false   
+---
+# Загрузка одиночного образа Cloud-init с интернета
+# os  : Proxmox (debian)
+# req : Internet
 
 
-    - name: Скачиваем и подгружаем Cloud-init образ
-      when: not _template_existed
+- name: Initialization variables
+  ansible.builtin.set_fact: # noqa jinja[spacing]
+    x_vmid     : "{{ x_vmid    | default(omit) }}"
+    x_url      : "{{ x_url     | default(omit) }}"
+    x_vmname   : "{{ x_vmname  | default(url.rsplit('/', 1)[-1].rsplit('.', 1)[0].replace('_', '-').replace('.', '-').replace(' ', '-')) }}"
+    x_storage  : "{{ x_storage | default(proxmox_storage) }}"
+    x_keep     : "{{ x_keep    | default(false) }}"
+    # Calculated
+    x_filename : "{{ url.rsplit('/', 1)[-1] }}"
+    
+
+
+- name: Получаем список существующих VM
+  ansible.builtin.command: qm list
+  changed_when: false
+  register: x_qmlist
+
+- name: "Проверяем существование VM c именем {{ x_vmname }}"
+  ansible.builtin.set_fact:
+    x_template_existed: "{{ x_vmname in x_qmlist.stdout }}"
+    x_template_created: false   
+
+- name: Скачиваем и подгружаем Cloud-init образ
+  when: not x_template_existed
+  block: 
+
+    - name: Определяем vmid (если не определено)
+      when: not x_vmid is defined
       block: 
-
-        - name: Определяем vmid (если не определено)
-          when: not _vmid is defined
-          block: 
-          
-          - name: Получаем следующий свободный vmid
-            ansible.builtin.command: pvesh get /cluster/nextid
-            changed_when: false
-            register: _nextid
-          
-          - name: Сохраняем значение в переменную _vmid
-            ansible.builtin.set_fact:
-              _vmid: "{{ _nextid.stdout }}"
-          
-          
-        # TODO: Добавить проверку checksum для скачанного образа
-        - name: Загружаем образ с интернета
-          ansible.builtin.get_url:
-            url: "{{ _url }}"
-            dest: "/tmp/{{ _filename }}"
-            # checksum: "{{ proxmox_cloudimage_hashtype }}:{{ proxmox_cloudimage_checksum }}"
-            mode: 0644
-
-        - name: Создаем VM
-          ansible.builtin.command: >-
-            qm create {{ _vmid }} --name "{{ _vmname }}" --memory 2048 --cores 2 --net0 virtio,bridge=vmbr0 
-          changed_when: true
-
-        - name: Импортируем загруженныйдиск и прикрепляем его как SCSI
-          ansible.builtin.command: >-
-            qm disk import {{ _vmid }} 
-            /tmp/{{ _filename }} 
-            {{ _storage }} 
-            --format qcow2
-          register: qmimportdisk
-          failed_when: "'uccessfully imported disk' not in qmimportdisk.stdout"
-          changed_when: true
-
-        - name: Прикрепляем его как scsi диск
-          ansible.builtin.command: >-
-            qm set {{ _vmid }} --scsihw virtio-scsi-pci --scsi0 {{ qmimportdisk.stdout | regex_search("imported disk.*'([^']+)'", "\1") | first }}
-          changed_when: true
-
-        - name: Ограничиваем загрузку только с этого диска
-          ansible.builtin.command: >-
-            qm set {{ _vmid }} --boot c --bootdisk scsi0
-          changed_when: true
-
-        - name: Настраиваем привод cd-rom для передачи данных Cloud-Init на виртуальную машину
-          ansible.builtin.command: >-
-            qm set {{ _vmid }} --ide2 {{ _storage }}:cloudinit
-          changed_when: true
-
-        - name: Настраиваем последовательную консоль и используем ее в качестве дисплея (требуется для многих образов) 
-          ansible.builtin.command: >-
-            qm set {{ _vmid }} --serial0 socket --vga serial0
-          changed_when: true
-
-        - name: Настравиваем дополнительные опции (включаем агента QEMU) 
-          ansible.builtin.command: >-
-            qm set {{ _vmid }} --agent enabled=1
-          changed_when: true
-
-        - name: Конвертируем в шаблон (позволяет в дальнейшем использовать связанные клоны)
-          ansible.builtin.command: >-
-            qm template {{ _vmid }}
-          changed_when: true
-        
-        - name: Store _template_created=true
-          ansible.builtin.set_fact:
-            _template_created: true
-
-      rescue:
-        - name: Something failed, remove the vm that is left without a disk
-          ansible.builtin.command: >-
-            qm destroy {{ _vmid }} -destroy-unreferenced-disks 1
-          changed_when: true
-        
-        - name: Exception fail
-          ansible.builtin.fail:
-            msg: something wrong
-
-      always:
-        - name: Clean up the temporary file
-          ansible.builtin.file:
-            path: "/tmp/{{ _filename }}"
-            state: absent
-          when: not _keep
-
       
+      - name: Получаем следующий свободный vmid
+        ansible.builtin.command: pvesh get /cluster/nextid
+        changed_when: false
+        register: x_nextid
+      
+      - name: Сохраняем значение в переменную x_vmid
+        ansible.builtin.set_fact:
+          x_vmid: "{{ x_nextid.stdout }}"
+      
+      
+    # TODO: Добавить проверку checksum для скачанного образа
+    - name: Загружаем образ с интернета
+      ansible.builtin.get_url:
+        url: "{{ x_url }}"
+        dest: "/tmp/{{ x_filename }}"
+        # checksum: "{{ proxmox_cloudimage_hashtype }}:{{ proxmox_cloudimage_checksum }}"
+        mode: 0644
+
+    - name: Создаем VM
+      ansible.builtin.command: >-
+        qm create {{ x_vmid }} --name "{{ x_vmname }}" --memory 2048 --cores 2 --net0 virtio,bridge=vmbr0 
+      changed_when: true
+
+    - name: Импортируем загруженныйдиск и прикрепляем его как SCSI
+      ansible.builtin.command: >-
+        qm disk import {{ x_vmid }} 
+        /tmp/{{ x_filename }} 
+        {{ x_storage }} 
+        --format qcow2
+      register: x_qmimportdisk
+      failed_when: "'uccessfully imported disk' not in x_qmimportdisk.stdout"
+      changed_when: true
+
+    - name: Прикрепляем его как scsi диск
+      ansible.builtin.command: >-
+        qm set {{ x_vmid }} --scsihw virtio-scsi-pci --scsi0 {{ x_qmimportdisk.stdout | regex_search("imported disk.*'([^']+)'", "\1") | first }}
+      changed_when: true
+
+    - name: Ограничиваем загрузку только с этого диска
+      ansible.builtin.command: >-
+        qm set {{ x_vmid }} --boot c --bootdisk scsi0
+      changed_when: true
+
+    - name: Настраиваем привод cd-rom для передачи данных Cloud-Init на виртуальную машину
+      ansible.builtin.command: >-
+        qm set {{ x_vmid }} --ide2 {{ x_storage }}:cloudinit
+      changed_when: true
+
+    - name: Настраиваем последовательную консоль и используем ее в качестве дисплея (требуется для многих образов) 
+      ansible.builtin.command: >-
+        qm set {{ x_vmid }} --serial0 socket --vga serial0
+      changed_when: true
+
+    - name: Настравиваем дополнительные опции (включаем агента QEMU) 
+      ansible.builtin.command: >-
+        qm set {{ x_vmid }} --agent enabled=1
+      changed_when: true
+
+    - name: Конвертируем в шаблон (позволяет в дальнейшем использовать связанные клоны)
+      ansible.builtin.command: >-
+        qm template {{ x_vmid }}
+      changed_when: true
+    
+    - name: Store x_template_created=true
+      ansible.builtin.set_fact:
+        x_template_created: true
+
+  rescue:
+    - name: Something failed, remove the vm that is left without a disk
+      ansible.builtin.command: >-
+        qm destroy {{ x_vmid }} -destroy-unreferenced-disks 1
+      changed_when: true
+    
+    - name: Exception fail
+      ansible.builtin.fail:
+        msg: something wrong
+
+  always:
+    - name: Clean up the temporary file
+      ansible.builtin.file:
+        path: "/tmp/{{ x_filename }}"
+        state: absent
+      when: not x_keep
+
+  

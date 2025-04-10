@@ -1,24 +1,29 @@
 ---
-# Данный плейбук только для deb-систем
+# Установка Docker-CE
+# os  : Deb*
+# req : Internet, x_package_req
+
 - name: Initialization variables
   ansible.builtin.set_fact:
-    _username: "{{ username | default(ansible_user_id) }}"
-    _package_req:
+    x_username: "{{ x_username | default(ansible_user_id) }}"
+    x_package_req:
       - ca-certificates
       - curl
       - gnupg
-    _package:       
+    x_package:       
       - docker-ce
       - docker-ce-cli
       - containerd.io
       - docker-compose
       - docker-compose-plugin
 
+
+
 - name: Defiane DEB arch
   ansible.builtin.command: |
     dpkg --print-architecture
   changed_when: false
-  register: _deb_arch
+  register: x_deb_arch
 
 - name: Define os codename
   ansible.builtin.shell: |
@@ -26,11 +31,11 @@
   args:
     executable: /bin/bash  
   changed_when: false
-  register: _os_codename
+  register: x_os_codename
 
 - name: Ensure pre-requisites are installed
   ansible.builtin.apt:
-    name: "{{ _package_req }}" 
+    name: "{{ x_package_req }}" 
     state: present
   become: yes
 
@@ -54,7 +59,7 @@
     path: /etc/apt/sources.list.d/docker.list
     create: true
     block: |
-      deb [arch={{ _deb_arch.stdout }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ distro_map[ansible_distribution] }} {{ _os_codename.stdout }} stable
+      deb [arch={{ x_deb_arch.stdout }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ distro_map[ansible_distribution] }} {{ x_os_codename.stdout }} stable
     marker: "# {mark} Ansible managed block for Docker repo"
     mode: '0644'
   vars:
@@ -62,18 +67,18 @@
       Linux Mint: ubuntu
       Ubuntu:     ubuntu
       Debian:     debian
-  register: _source_update
+  register: x_source_update
   become: yes
 
 - name: Update apt sources
   ansible.builtin.apt:
     update_cache: yes
-  when: _source_update is changed
+  when: x_source_update is changed
   become: yes
 
 - name: Install Docker Engine and related packages
   ansible.builtin.apt:
-    name: "{{ _package }}"
+    name: "{{ x_package }}"
     state: present
   become: yes
 
@@ -86,13 +91,13 @@
 
 - name: Add user to the docker group
   ansible.builtin.user:
-    name: "{{ _username }}"
+    name: "{{ x_username }}"
     groups: docker
     append: yes
   become: yes
 
 - name: Test Docker installation
   ansible.builtin.command: docker run hello-world
-  register: _docker_test
+  register: x_res
   changed_when: false
-  failed_when: _docker_test.rc != 0
+  failed_when: x_res.rc != 0

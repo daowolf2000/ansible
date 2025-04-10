@@ -1,12 +1,18 @@
 ---
+# Проброс GPU Nvidia внутрь LXC контейнера Proxmox
+# os  : Debian
+# req : Internet
+
 - name: Initialization variables
   ansible.builtin.set_fact:
-    _nvidia_package:
+    x_nvidia_package:
       - libnvcuvid1 
       - libnvidia-encode1 
       - nvidia-smi 
       - linux-headers-amd64 
       - nvidia-driver-bin
+
+
 
 - name: Настройка параметров LXC контейнера
   notify: Reboot
@@ -15,12 +21,12 @@
   
   - name: Определяем мажорный номер nvidia0
     ansible.builtin.shell: set -o pipefail && ls -al /dev/nvidia0 | grep -Po '\d+(?=,)'
-    register: _maj_nvidia0
+    register: x_maj_nvidia0
     changed_when: false
 
   - name: Определяем мажорный номер nvidia-uvm
     ansible.builtin.shell: set -o pipefail && ls -al /dev/nvidia-uvm | grep -Po '\d+(?=,)'
-    register: _maj_nvidia_uvm
+    register: x_maj_nvidia_uvm
     changed_when: false
 
   - name: Конфигурирование контейнера
@@ -28,10 +34,9 @@
       path: /etc/pve/lxc/{{ proxmox_vmid }}.conf
       line: "{{ item }}"
       state: present
-    register: res
     loop:
-        - "lxc.cgroup2.devices.allow: c {{ _maj_nvidia0.stdout }}:* rwm"
-        - "lxc.cgroup2.devices.allow: c {{ _maj_nvidia_uvm.stdout }}:* rwm"
+        - "lxc.cgroup2.devices.allow: c {{ x_maj_nvidia0.stdout }}:* rwm"
+        - "lxc.cgroup2.devices.allow: c {{ x_maj_nvidia_uvm.stdout }}:* rwm"
         - "lxc.mount.entry: /dev/nvidia0 dev/nvidia0 none bind,optional,create=file"
         - "lxc.mount.entry: /dev/nvidiactl dev/nvidiactl none bind,optional,create=file"
         - "lxc.mount.entry: /dev/nvidia-uvm dev/nvidia-uvm none bind,optional,create=file"
@@ -46,16 +51,16 @@
       path: /etc/apt/sources.list
       regexp: '^(deb .* {{ ansible_distribution_release }} main).*$'
       replace: '\1 contrib non-free non-free-firmware'
-    register: _source_update
+    register: x_source_update
 
   - name: Обновление репозитория
     ansible.builtin.apt:
       update_cache: yes
-    when: _source_update is changed 
+    when: x_source_update is changed 
 
   - name: Установка драйверов Nvidia
     ansible.builtin.apt:
-      name: "{{ _nvidia_package }}"
+      name: "{{ x_nvidia_package }}"
 
   - name: Добавление модуля nouveau в черный список
     ansible.builtin.copy:

@@ -1,18 +1,23 @@
 ---
 # Установка и настройка Terraform (используя зеркало Яндекса)
+# os  : ALL
+# req : Internet, 
 
 - name: Initialization variables
   ansible.builtin.set_fact: # noqa jinja[spacing]
-    x_path      : "{{ terraform_path   | default('/usr/local/bin') }}"
-    x_repo      : "{{ terraform_repo   | default('https://hashicorp-releases.yandexcloud.net/terraform') }}"
-    x_arch      : "{{ terraform_arch   | default('linux_amd64') }}"
-    x_ver       : "{{ terraform_ver    | default('1.11.3') }}"
-    x_user      : "{{ terraform_user   | default(ansiblex_user_id) }}"
-    x_mirror    : "{{ terraform_mirror | default('https://terraform-mirror.yandexcloud.net/') }}"
+    x_path      : "{{ x_path   | default('/usr/local/bin') }}"
+    x_repo      : "{{ x_repo   | default('https://hashicorp-releases.yandexcloud.net/terraform') }}"
+    x_arch      : "{{ x_arch   | default('linux_amd64') }}"
+    x_ver       : "{{ x_ver    | default('1.11.3') }}"
+    x_user      : "{{ x_user   | default(ansiblex_user_id) }}"
+    x_mirror    : "{{ x_mirror | default('https://terraform-mirror.yandexcloud.net/') }}"
+    x_package_req: [ jq ]
+
+
 
 - name: Install required
   ansible.builtin.apt:
-    name: jq
+    name: "{{ x_package_req }}"
   become: yes
 
 - name: Check terraform install and version
@@ -22,16 +27,16 @@
     executable: /bin/bash
   changed_when: false
   failed_when: false
-  register: o_cur_ver
+  register: x_cur_ver
 
 - name: Debug
   ansible.builtin.debug:
-    msg: "{{ o_cur_ver.stdout }} != {{ x_ver }} =>> {{ o_cur_ver.stdout != x_ver }}"
+    msg: "{{ x_cur_ver.stdout }} != {{ x_ver }} =>> {{ x_cur_ver.stdout != x_ver }}"
     verbosity: 1
 
 - name: Install Terraform
   tags: [ terraform, install ]
-  when: o_cur_ver is failed or o_cur_ver.stdout != x_ver
+  when: x_cur_ver is failed or x_cur_ver.stdout != x_ver
   block: 
     - name: Download hash file
       ansible.builtin.get_url:
@@ -45,14 +50,14 @@
       args:
         executable: /bin/bash
       changed_when: false
-      register: _hash_sum
+      register: x_hash_sum
 
     - name: Download Terraform binary
       ansible.builtin.get_url:
         url: "{{ x_repo }}/{{ x_ver }}/terraform_{{ x_ver }}_{{ x_arch }}.zip"
         dest: /tmp/terraform_{{ x_ver }}_{{ x_arch }}.zip
         mode: 0644
-        checksum: "sha256:{{ _hash_sum.stdout }}"
+        checksum: "sha256:{{ x_hash_sum.stdout }}"
 
     - name: Unzip Terraform archive
       ansible.builtin.unarchive:
@@ -65,21 +70,21 @@
     - name: Delete temp file
       ansible.builtin.command:
         "rm /tmp/terraform_{{ x_ver }}*"
-      register: _res_deltemp
-      changed_when: _res_deltemp not failed
+      register: x_res_deltemp
+      changed_when: x_res_deltemp not failed
 
 - name: Configure Terraform for user {{ x_user }}
   block: 
 
   - name: Get userinfo
-    ansible.builtin.include_tasks: getx_userinfo.yml
+    ansible.builtin.include_tasks: userinfo.yml
     vars:
       username: "{{ x_user }}"
       
 
   - name: Install autocomplete
     ansible.builtin.lineinfile:
-      path: "{{ getx_userinfo.home_dir }}/.bashrc"
+      path: "{{ o_userinfo.home_dir }}/.bashrc"
       line: "complete -C {{ x_path }}/terraform terraform"
 
   - name: Configure Yandex mirror for terraform
@@ -94,5 +99,5 @@
             exclude = ["registry.terraform.io/*/*"]
           }
         }
-      dest: "{{ getx_userinfo.home_dir }}/.terraformrc"
+      dest: "{{ o_userinfo.home_dir }}/.terraformrc"
       mode: 0644

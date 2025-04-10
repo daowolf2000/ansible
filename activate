@@ -2,4 +2,4 @@
 export ANSIBLE_DIR=$(dirname "$(readlink -f "${BASH_SOURCE}")")
 export ANSIBLE_CONFIG=${ANSIBLE_DIR}/ansible.cfg
 source ${ANSIBLE_DIR}/.venv/bin/activate
-source ${ANSIBLE_DIR}/secret_vault/*.env
+source ${ANSIBLE_DIR}/secret_vault/vars.env
