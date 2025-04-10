@@ -1,0 +1,38 @@
+---
+# Базовая настройка Porxmox PVE
+# os  : Proxmox (debian)
+# req :
+
+- name: Initialization variables
+  ansible.builtin.set_fact:
+    x_release: "{{ x_release | default(ansible_distribution_release) }}"
+    x_package:
+      - sudo
+      - git
+      - gpg
+      - mc
+      - python3-proxmoxer
+      - python3-requests   
+      - nvidia-driver
+      - nvtop
+
+
+
+- name: Add non-free repo in sources.list
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list
+    regexp: '^(deb .* {{ x_release }} main).*$'
+    replace: '\1 contrib non-free non-free-firmware'
+  register: x_res
+
+- name: Update apt cache # noqa: no-handler
+  ansible.builtin.apt:
+    update_cache: yes
+  when: x_res.changed 
+
+- name: Install base package
+  ansible.builtin.apt:  
+    name: "{{ x_package }}"
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600

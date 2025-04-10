@@ -1,0 +1,70 @@
+# Установка провайдера Terraform для работы с Proxmox
+# os  : ALL
+# req : Internet
+
+- name: Initialization variables
+  ansible.builtin.set_fact: # noqa jinja[spacing]
+    x_repo  : "{{ x_repo  | default('https://github.com/Telmate/terraform-provider-proxmox') }}"
+    x_ver   : "{{ x_ver   | default('2.9.14') }}"  
+    x_arch  : "{{ x_arch  | default('linux_amd64') }}"  
+    x_user  : "{{ x_user  | default(ansible_user_id) }}"
+    x_package_req:
+      - golang
+
+  
+
+- name: Get userinfo
+  ansible.builtin.import_tasks: userinfo.yml
+
+- name: Set x_plugin_dir
+  ansible.builtin.set_fact:
+    x_plugin_dir: "{{ o_userinfo.home_dir }}/.terraform.d/plugins/registry.terraform.io/telmate/proxmox/{{ x_ver }}/{{ x_arch }}"
+
+# FIX: Добавить проверку версии плагина
+- name: Check provider install
+  ansible.builtin.stat: 
+    path:   "{{ x_plugin_dir }}/terraform-provider-proxmox"
+  register: x_provider_exists
+
+- name: Install provider
+  when: not x_provider_exists.stat.exists
+  block:
+
+  - name: Create directory for repo
+    ansible.builtin.file: 
+      path:   "{{ x_plugin_dir }}"
+      state:  directory
+      mode:   0755
+
+  - name: Install required tools
+    ansible.builtin.apt:
+      name: "{{ x_package_req }}" 
+    become: true
+
+  - name: Clone from git
+    ansible.builtin.git:
+      repo: "{{ x_repo }}"
+      dest: "/tmp/terraform-provider-proxmox"
+      version: "v{{ x_ver }}"
+      update: yes
+
+  - name: Run the Makefile
+    community.general.make:
+      chdir: "/tmp/terraform-provider-proxmox"
+
+  - name: Create Terraform plugins directory
+    ansible.builtin.file: 
+      path:   "{{ x_plugin_dir }}"
+      state:  directory
+      mode:   0755
+
+  - name: Copy plugin for Proxmox
+    ansible.builtin.copy:
+      src:  "/tmp/terraform-provider-proxmox/bin/terraform-provider-proxmox" 
+      dest: "{{ x_plugin_dir }}"
+      mode: 0755
+
+  - name: Delete temp folders
+    ansible.builtin.file:
+      path: "/tmp/terraform-provider-proxmox"
+      state: absent

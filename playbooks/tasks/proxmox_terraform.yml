@@ -1,0 +1,69 @@
+# Подготовка Proxmox для управления через Terraform
+# os  : Proxmox (debian)
+# req : none
+
+- name: Initialization variables
+  ansible.builtin.set_fact: # noqa jinja[spacing]
+    x_package:
+      - libguestfs-tools
+    x_user: "{{ x_user | default('terraform@pve') }}"
+    x_role:
+      name: Terraform
+      privileges: 
+        - "Datastore.AllocateSpace" 
+        - "Datastore.Audit" 
+        - "Pool.Allocate"
+        - "Sys.Audit" 
+        - "Sys.Console" 
+        - "Sys.Modify"
+        - "VM.Allocate"
+        - "VM.Audit"
+        - "VM.Clone"
+        - "VM.Config.CDROM"
+        - "VM.Config.Cloudinit" 
+        - "VM.Config.CPU" 
+        - "VM.Config.Disk"
+        - "VM.Config.HWType"
+        - "VM.Config.Memory"
+        - "VM.Config.Network"
+        - "VM.Config.Options"
+        - "VM.Migrate"
+        - "VM.Monitor"
+        - "VM.PowerMgmt"
+        - "SDN.Use"
+
+
+
+- name: Install required tools on Proxmox server
+  ansible.builtin.apt:
+    name:             libguestfs-tools
+    update_cache:     yes
+    cache_valid_time: 3600
+
+- name: Configure Proxmox roles
+  proxmox_role:
+    name:       "{{ x_role.name }}"
+    privileges: "{{ x_role.privileges }}"
+    state:      present
+
+- name: Configure Proxmox user accounts
+  proxmox_user:
+    name: "{{ x_user }}"
+    state: present
+  register: _new_user 
+
+- name: Configure Proxmox ACLs
+  proxmox_acl:
+    path:   /
+    roles:  [ "{{ x_role.name }}" ]
+    users:  [ "{{ x_user }}" ]
+    state: present
+
+# FIXME: Создание токена для пользователя proxmox и запись его в файл
+# - name: Create Proxmox Token
+#  ansible.builtin.import_tasks: tasks/proxmox_user_token.yml
+#
+# - name: Write API token to "{{ x_token_file }}"
+#
+
+

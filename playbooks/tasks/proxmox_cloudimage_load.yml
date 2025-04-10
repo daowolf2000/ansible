@@ -3,11 +3,17 @@
 # os  : Proxmox (debian)
 # req : Internet
 
+# Список репозитариев для загрузки Cloud-Init образов
+# - Debian        - https://cloud.debian.org/images/cloud/
+# - Oracle Linux  - https://yum.oracle.com/oracle-linux-templates.html
+# - Astra Linux   - https://dl.astralinux.ru/ui/native/mg-generic/alse/cloudinit/
+#                   Также см. статью https://docs.astra-automation.ru/1.0/misc/products/vm/ 
+
 
 - name: Initialization variables
   ansible.builtin.set_fact: # noqa jinja[spacing]
-    x_vmid     : "{{ x_vmid    | default(omit) }}"
-    x_url      : "{{ x_url     | default(omit) }}"
+    x_url      : "{{ x_url     | default(omit) }}" # ОБЯЗАТЕЛЬНО !!!
+    x_vmid     : "{{ x_vmid    | default(omit) }}" # Если не указано, то используется следующий свободный VMID
     x_vmname   : "{{ x_vmname  | default(url.rsplit('/', 1)[-1].rsplit('.', 1)[0].replace('_', '-').replace('.', '-').replace(' ', '-')) }}"
     x_storage  : "{{ x_storage | default(proxmox_storage) }}"
     x_keep     : "{{ x_keep    | default(false) }}"

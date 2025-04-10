@@ -18,7 +18,7 @@ Codestyle
     - name: Initialization variables
       ansible.builtin.set_fact: # noqa jinja[spacing]
         x_path      : "{{ path   | default('/usr/local/bin') }}"
-        x_user      : "{{ user   | default(ansiblex_user_id) }}"
+        x_user      : "{{ user   | default(ansible_user_id) }}"
   ```
 
 

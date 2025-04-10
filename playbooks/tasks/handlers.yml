@@ -1,0 +1,5 @@
+# Общие Handlers
+
+- name: Reboot
+  ansible.builtin.reboot:
+    reboot_timeout: "{{ reboot_timeout | default(300) }}"

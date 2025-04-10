@@ -1,0 +1,25 @@
+# Установка базовых пакетов
+# os  : Deb*
+# req : none
+
+- name: Initialization variables
+  ansible.builtin.set_fact:
+    x_package:       
+      - ca-certificates
+      - curl
+      - gnupg
+      - jq
+      - htop
+      - sudo
+      - git
+      - gpg
+      - mc
+
+
+
+- name: Установка пакетов
+  ansible.builtin.apt:
+    name: "{{ package }}"
+    update_cache: yes
+    cache_valid_time: 3600
+  become: yes

@@ -5,7 +5,7 @@
 
 - name: Initialization variables
   ansible.builtin.set_fact: # noqa jinja[spacing]
-    x_username: "{{ x_username | default('root') }}"
+    x_user    : "{{ x_user | default('root') }}"
     x_state   : "{{ x_state    | default('present') }}"
     x_keyfile : "{{ x_keyfile  | default(lookup('file', lookup('env', 'HOME') + '/.ssh/id_ed25519.pub')) }}"
 
@@ -13,6 +13,6 @@
 
 - name: Set authorized key for "{{ username }}"
   ansible.posix.authorized_key:
-    user:   "{{ x_username }}"
+    user:   "{{ x_user }}"
     state:  "{{ x_state }}"
     key:    "{{ x_keyfile }}"

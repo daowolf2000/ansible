@@ -78,9 +78,6 @@
 
   - name: Get userinfo
     ansible.builtin.include_tasks: userinfo.yml
-    vars:
-      username: "{{ x_user }}"
-      
 
   - name: Install autocomplete
     ansible.builtin.lineinfile:

@@ -5,7 +5,7 @@
 
 - name: Initialization variables
   ansible.builtin.set_fact:
-    x_username: "{{ x_username | default(ansible_user_id) }}"
+    x_user: "{{ x_user | default(ansible_user_id) }}"
     x_package_req:
       - ca-certificates
       - curl
@@ -91,7 +91,7 @@
 
 - name: Add user to the docker group
   ansible.builtin.user:
-    name: "{{ x_username }}"
+    name: "{{ x_user }}"
     groups: docker
     append: yes
   become: yes
