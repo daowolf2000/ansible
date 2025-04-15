@@ -1,0 +1,99 @@
+---
+- name: Создание LXC контейнера
+  hosts: pve
+  vars:
+    lxc_vmid: 
+    lxc_name: gpu-base
+    lxc_template: true
+    proxmox_conn: &proxmox_conn 
+      node        : "{{ proxmox_node | default(lookup('env', 'PROXMOX_NODE')) }}"
+      api_host    : "{{ proxmox_api_host | default(lookup('env', 'PROXMOX_API_HOST')) }}"
+      api_user    : "{{ proxmox_api_user | default(lookup('env', 'PROXMOX_USERNAME')) }}"
+      api_password: "{{ proxmox_api_password | default(lookup('env', 'PROXMOX_PASSWORD')) }}"
+
+  tasks:
+  - name: Check exists LXC template
+    community.general.proxmox_vm_info:
+      <<: *proxmox_conn
+      name: "{{ lxc_name }}"
+      validate_certs: no
+    register: lxc_info
+  
+  - name: Debug
+    ansible.builtin.debug:
+      var: lxc_info
+      verbosity: 1
+
+  - name: Create new LXC
+    community.general.proxmox:
+      <<: *proxmox_conn 
+      hostname  : "{{ lxc_name }}"
+      password  : "{{ lookup('env', 'DEFAULT_PASSWORD') }}"
+      pubkey    : "{{ lookup('file', lookup('env', 'DEFAULT_PUBKEY')) }}"
+      ostemplate: "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+      storage   : "local-lvm"
+      memory    : 2048
+      features:
+        - nesting=1
+        - keyctl=1
+      netif:
+        net0: "name=eth0,ip=dhcp,bridge=vmbr0"
+
+  - name: Start LXC
+    community.general.proxmox:
+      <<: *proxmox_conn 
+      hostname: "{{ lxc_name }}"
+      state: started
+    when: 
+      - lxc_info.proxmox_vms is defined
+      - lxc_info.proxmox_vms | length > 0
+      - not lxc_info.proxmox_vms[0].template
+    register: lxc_started
+    failed_when: false
+
+  - name: Wait for start LXC 
+    when: lxc_started is changed
+    ansible.builtin.pause:
+      seconds: 15
+
+  - name: Refresh inventory
+    ansible.builtin.meta: refresh_inventory
+
+- name: Подготовка шаблона LXC
+  hosts: lxc-base
+
+  roles:
+    - role: docker
+
+
+  tasks:
+
+    - name: Проброс GPU
+      ansible.builtin.include_role:
+        name: proxmox
+        tasks_from: lxc_gpu_passthru
+    
+    - name: Установка Docker
+      ansible.builtin.include_role:
+        name: docker
+
+    - name: Установка Nvidia CTK
+      ansible.builtin.include_role:
+        name: nvidia
+        tasks_from: container_toolkit
+      vars:
+        nvidia_ctk_no_cgroups: "true"
+
+    - name: Конвертируем в шаблон
+      ansible.builtin.include_role:
+        name: proxmox
+        tasks_from: lxc_convert_to_template
+      vars:
+        nvidia_ctk_no_cgroups: "true"
+
+- ansible.builtin.import_playbook:
+    "{{ lookup('env','ANSIBLE_PLAYS') }}/pve/convert_lxc_to_template.yml"
+
+
+
+  
