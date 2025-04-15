@@ -1,9 +1,8 @@
 ---
 - name: Создание LXC контейнера
-  hosts: pve
+  hosts: "{{ proxmox_node | default(lookup('env', 'PROXMOX_NODE')) }}"
   vars:
-    lxc_vmid: 
-    lxc_name: gpu-base
+    target: "{{ default('gpu-base') }}"
     lxc_template: true
     proxmox_conn: &proxmox_conn 
       node        : "{{ proxmox_node | default(lookup('env', 'PROXMOX_NODE')) }}"
@@ -15,9 +14,9 @@
   - name: Check exists LXC template
     community.general.proxmox_vm_info:
       <<: *proxmox_conn
-      name: "{{ lxc_name }}"
+      name: "{{ target }}"
       validate_certs: no
-    register: lxc_info
+    register: lxc_info                                                            
   
   - name: Debug
     ansible.builtin.debug:
@@ -27,7 +26,7 @@
   - name: Create new LXC
     community.general.proxmox:
       <<: *proxmox_conn 
-      hostname  : "{{ lxc_name }}"
+      hostname  : "{{ target }}"
       password  : "{{ lookup('env', 'DEFAULT_PASSWORD') }}"
       pubkey    : "{{ lookup('file', lookup('env', 'DEFAULT_PUBKEY')) }}"
       ostemplate: "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
@@ -42,7 +41,7 @@
   - name: Start LXC
     community.general.proxmox:
       <<: *proxmox_conn 
-      hostname: "{{ lxc_name }}"
+      hostname: "{{ target }}"
       state: started
     when: 
       - lxc_info.proxmox_vms is defined
@@ -59,13 +58,9 @@
   - name: Refresh inventory
     ansible.builtin.meta: refresh_inventory
 
+
 - name: Подготовка шаблона LXC
-  hosts: lxc-base
-
-  roles:
-    - role: docker
-
-
+  hosts: "{{ target | default('gpu-base') }}"
   tasks:
 
     - name: Проброс GPU
@@ -88,12 +83,6 @@
       ansible.builtin.include_role:
         name: proxmox
         tasks_from: lxc_convert_to_template
-      vars:
-        nvidia_ctk_no_cgroups: "true"
-
-- ansible.builtin.import_playbook:
-    "{{ lookup('env','ANSIBLE_PLAYS') }}/pve/convert_lxc_to_template.yml"
-
 
 
   
