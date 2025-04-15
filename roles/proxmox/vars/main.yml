@@ -1,0 +1,5 @@
+proxmox_conn: &proxmox_conn 
+  node        : "{{ proxmox_node | default(lookup('env', 'PROXMOX_NODE')) }}"
+  api_host    : "{{ proxmox_api_host | default(lookup('env', 'PROXMOX_API_HOST')) }}"
+  api_user    : "{{ proxmox_api_user | default(lookup('env', 'PROXMOX_USERNAME')) }}"
+  api_password: "{{ proxmox_api_password | default(lookup('env', 'PROXMOX_PASSWORD')) }}"

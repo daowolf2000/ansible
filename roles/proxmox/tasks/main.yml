@@ -1,0 +1,15 @@
+---
+# Базовая настройка Porxmox PVE
+
+- name: Install base package
+  ansible.builtin.apt:  
+    name: 
+      - sudo
+      - git
+      - gpg
+      - mc
+      - python3-proxmoxer
+      - python3-requests   
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600

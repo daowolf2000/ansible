@@ -1,0 +1,25 @@
+---
+- name: Add non-free repo в sources.list
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list
+    regexp: '^(deb .* {{ ansible_distribution_release }} main).*$'
+    replace: '\1 contrib non-free non-free-firmware'
+  register: _repo_changed
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+  when: _repo_changed is changed 
+
+- name: Install Nvidia package
+  ansible.builtin.apt:
+    name: "{{ nvidia_package }}"
+
+- name: Add nouveau to blacklist
+  ansible.builtin.copy:
+    content: |
+      blacklist nouveau
+    dest  : /etc/modprobe.d/blacklist-nouveau.conf
+    owner : root
+    group : root
+    mode  : 0644

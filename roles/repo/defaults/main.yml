@@ -1,0 +1,9 @@
+# (required) GPG key target name.
+repo_name   : "{{ undef(hint='You must specify repo name') }}"        # Имя репозитория (используется при именовании файла)
+repo_source : "{{ undef(hint='You must specify line to add repo') }}" # Может быть массивом
+
+repo_extra        : "{{ d(omit) }}"
+repo_key_url      : "{{ d(omit) }}"
+repo_key_path     : /usr/share/keyrings
+repo_key_id       : null
+repo_key_dearmor  : false

@@ -1,0 +1,47 @@
+---
+- name: Configure repository
+  ansible.builtin.include_role:
+    name: repo
+  vars:
+    repo_name:    "nvidia-conteiner-toolkit"
+    repo_source:  "https://nvidia.github.io/libnvidia-container/stable/deb/$(ARCH) /"
+    repo_key_url: "https://nvidia.github.io/libnvidia-container/gpgkey"
+    repo_key_dearmor: yes
+
+- name: Install package nvidia-container-toolkit
+  ansible.builtin.apt:
+    name  : nvidia-container-toolkit
+    state : present
+  become: yes
+
+- name: Configure Nvidia-CTK
+  ansible.builtin.template:
+    src   : nvidia-ctk-config.j2
+    dest  : /etc/nvidia-container-runtime/config.toml
+    owner : root
+    group : root
+    mode  : 0644
+
+- name: Configure Docker
+  ansible.builtin.copy:
+    content: |
+      {
+        "default-runtime": "nvidia",
+        "runtimes": {
+          "nvidia": {
+            "path": "nvidia-container-runtime",
+            "runtimeArgs": []
+          }
+        }
+      }
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: 0644
+  register: _docker_conf_update
+
+- name: Restart Docker service
+  when: _docker_conf_update is changed
+  ansible.builtin.service:
+    name: docker
+    state: restarted

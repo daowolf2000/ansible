@@ -1,0 +1,14 @@
+/hosts/*
+!/hosts/proxmox.yml
+/secrets
+/temp
+/logs
+/vars
+
+.ansible/
+.venv/
+.vscode/
+*.backup
+*.env
+*.log
+

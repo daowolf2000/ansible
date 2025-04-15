@@ -1,0 +1,51 @@
+---
+- name: Defiane DEB arch
+  ansible.builtin.command: |
+    dpkg --print-architecture
+  changed_when: false
+  register: _deb_arch
+
+- name: Define os codename
+  ansible.builtin.shell: |
+    source /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}"
+  args:
+    executable: /bin/bash  
+  changed_when: false
+  register: _os_codename
+
+- name: Configure repository
+  ansible.builtin.include_role:
+    name: repo
+  vars:
+    repo_name:    "docker"
+    repo_extra:   "arch={{ _deb_arch.stdout }}"
+    repo_source:  "https://download.docker.com/linux/{{ docker_distro_map[ansible_distribution] }} {{ _os_codename.stdout }} stable"
+    repo_key_url: "https://download.docker.com/linux/debian/gpg"
+    repo_key_dearmor: yes
+
+- name: Install Docker Engine and related packages
+  ansible.builtin.apt:
+    name  : "{{ docker_package }}"
+    state : present
+  become: yes
+
+- name: Enable Docker to start at boot
+  ansible.builtin.systemd:
+    name    : docker
+    enabled : true
+    state   : started
+  become: yes
+
+- name: Add user to the docker group
+  ansible.builtin.user:
+    name    : "{{ docker_user }}"
+    groups  : docker
+    append  : yes
+  become: yes
+
+# - name: Test Docker installation
+#   ansible.builtin.command: |
+#     docker run hello-world
+#   register: _test
+#   changed_when: false
+#   failed_when: _test.rc != 0

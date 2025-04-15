@@ -1,0 +1,74 @@
+---
+- name: Set extra prop
+  ansible.builtin.set_fact:
+    _repo_extra: "{{ (repo_extra | default(''))  ~ ' signed-by=' ~ repo_key_file }}"
+
+- name: Check if matching GPG key already exists.
+  ansible.builtin.shell:
+    cmd: |-
+      [ -f {{ repo_key_file | quote }} ] || exit 2
+      gpg --list-keys --no-default-keyring --keyring {{ repo_key_file | quote }} {{ repo_key_id or '' }}
+      exit $?
+  register: should_download_gpg_key
+  failed_when: should_download_gpg_key.rc not in (0, 2)
+  changed_when: false
+
+- name: Add GPG key {{ repo_name }}
+  when: should_download_gpg_key.rc != 0
+  block:
+    - name: Create temporary file for {{ repo_name }}.
+      ansible.builtin.tempfile:
+        state: file
+      register: gpg_tempfile
+
+    - name: Create temporary file for armored {{ repo_name }}.
+      ansible.builtin.tempfile:
+        state: file
+      register: asc_tempfile
+      when: repo_key_dearmor
+
+    - name: Download GPG key {{ repo_name }} 
+      ansible.builtin.get_url:
+        url   : "{{ repo_key_url }}"
+        dest  : "{{ asc_tempfile.path if repo_key_dearmor else gpg_tempfile.path }}"
+        mode  : 0600
+        force : true
+
+    - name: Dearmor GPG key {{ repo_name }}
+      ansible.builtin.command:
+        argv:
+          - gpg
+          # we want to write to the temporary file even though it already exists
+          - --yes
+          - -o
+          - "{{ gpg_tempfile.path | quote }}"
+          - --dearmor
+          - "{{ asc_tempfile.path | quote }}"
+      changed_when: true
+      when: repo_key_dearmor
+
+    - name: Copy GPG key to {{ repo_key_file }}.
+      become: true
+      ansible.builtin.copy:
+        remote_src: yes
+        src   : "{{ gpg_tempfile.path }}"
+        dest  : "{{ repo_key_file }}"
+        owner : root
+        group : root
+        mode  : 0644
+      register: repo_apt_key_changed
+
+  always:
+    - name: Remove temporary file for armored {{ repo_name }}.
+      ansible.builtin.file:
+        path  : "{{ asc_tempfile.path }}"
+        state : absent
+      when: repo_key_dearmor
+
+    - name: Remove temporary file for {{ repo_name }}.
+      ansible.builtin.file:
+        path  : "{{ gpg_tempfile.path }}"
+        state : absent
+
+  
+

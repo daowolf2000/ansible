@@ -1,0 +1,4 @@
+---
+repo_key_file: "{{ repo_key_path }}/{{ repo_name }}-archive-keyring.gpg"
+_repo_extra: "{{ omit }}"
+repo_apt_key_changed: "{{ omit }}"

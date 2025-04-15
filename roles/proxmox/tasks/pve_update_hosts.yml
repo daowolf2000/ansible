@@ -1,0 +1,30 @@
+---
+- name: Get VM info from "{{ proxmox_node }}"
+  community.general.proxmox_vm_info: # noqa jinja[spacing]
+    node        : "{{ proxmox_node      }}"
+    api_host    : "{{ proxmox_api_host  }}"
+    api_user    : "{{ proxmox_api_user  }}"
+    api_password: "{{ proxmox_api_passw }}"
+    validate_certs: no
+    network: yes
+  register: vm_info
+
+- name: Debug
+  ansible.builtin.debug:
+    var: vm_info
+    verbosity: 1
+
+- name: Update /etc/hosts on localhost {{ target | default('localhost') }}
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} ANSIBLE MANAGED BLOCK FOR PROXMOX VMS"
+    block: |
+      {% for vm in vm_info.proxmox_vms %}
+      {% if vm.network != none %}
+      {% for net in vm.network if net.name == 'eth0' %}
+      {{ '%-16s' % net.inet.split('/')[0] }} {{ vm.name }}
+      {% endfor %}
+      {% endif%}
+      {% endfor %}
+  become: yes
+  delegate_to: "{{ target | default('localhost') }}"

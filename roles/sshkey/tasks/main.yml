@@ -1,0 +1,6 @@
+---
+- name: Set authorized key for "{{ username }}"
+  ansible.posix.authorized_key:
+    user:   "{{ sshkey_user }}"
+    state:  "{{ sshkey_state }}"
+    key:    "{{ sshkey_file }}"

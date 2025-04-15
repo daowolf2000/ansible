@@ -1,0 +1,13 @@
+---
+terraform_path    : "/usr/local/bin"
+terraform_repo    : "https://hashicorp-releases.yandexcloud.net/terraform"
+terraform_arch    : "linux_amd64"
+terraform_ver     : "1.11.3"
+terraform_user    : "{{ ansible_user_id }}"
+terraform_mirror  : "https://terraform-mirror.yandexcloud.net/"
+terraform_autocomplete: yes 
+
+# Для установки провайдера для Proxmox
+terraform_proxmox_repo  : "https://github.com/Telmate/terraform-provider-proxmox"
+terraform_proxmox_ver   : "2.9.14"  # Установите в "none" что бы пропустить установку
+terraform_proxmox_req   : [ golang ]

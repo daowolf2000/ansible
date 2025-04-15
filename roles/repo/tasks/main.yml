@@ -1,0 +1,30 @@
+---
+- name: Add apt signing key
+  when: repo_key_url is defined
+  ansible.builtin.include_tasks: apt_key.yml
+ 
+- name: Add repository to sources
+  ansible.builtin.template:
+    src   : sources.list.j2
+    dest  : "/etc/apt/sources.list.d/{{ repo_name }}.list"
+    owner : root
+    group : root
+    mode  : 0644
+  become: yes
+  register: repo_updated
+
+- name: Debug
+  ansible.builtin.debug:
+    var: repo_apt_key_changed
+    verbosity: 1
+
+- name: Debug
+  ansible.builtin.debug:
+    var: repo_updated
+    verbosity: 1
+
+- name: Apt update
+  when: repo_updated is changed or repo_apt_key_changed is changed
+  ansible.builtin.apt:
+    update_cache: yes
+  become: yes

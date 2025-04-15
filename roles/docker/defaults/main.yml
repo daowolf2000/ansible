@@ -1,0 +1,15 @@
+docker_user: "{{ ansible_user_id }}"
+docker_package_req:
+  - ca-certificates
+  - curl
+  - gnupg
+docker_package:       
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-compose
+  - docker-compose-plugin
+docker_distro_map:
+    Linux Mint: ubuntu
+    Ubuntu:     ubuntu
+    Debian:     debian

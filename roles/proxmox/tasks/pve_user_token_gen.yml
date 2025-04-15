@@ -1,0 +1,24 @@
+---
+# Генерация API-token для пользователя Proxmox
+# os  : Proxmox (debian)
+# req : none
+
+# FIX: Добавить проверку на существование токена и повторную генерацию при необходимости
+- name: Initialization variables
+  ansible.builtin.set_fact: # noqa jinja[spacing]
+    x_user  : "{{ x_user  | default('root') }}"
+    x_force : "{{ x_force     | default(false) }}" # Перегенирировать или нет если существует
+
+
+
+- name: Generate Terraform Authentication Token
+  ansible.builtin.command:
+    cmd: "pveum user token add {{ x_user }} terraform-token --privsep=0 --noborder --noheader"
+  changed_when: false
+  register: x_token_output
+
+- name: Extract Full Token ID and Secret from Output
+  ansible.builtin.set_fact:
+    o_token:
+      full_token_id: "{{ x_token_output.stdout_lines[0].split()[1].strip() }}"
+      secret: "{{ x_token_output.stdout_lines[2].split()[1].strip() }}"

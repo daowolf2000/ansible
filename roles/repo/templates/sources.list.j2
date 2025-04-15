@@ -1,0 +1,7 @@
+{% if repo_source is iterable and repo_source is not string %}
+{% for item in repo_source %}
+deb {% if _repo_extra is defined %}[{{ _repo_extra }}]{% endif %} {{ item }}
+{% endfor %}
+{% else %}
+deb {% if _repo_extra is defined %}[{{ _repo_extra }}]{% endif %} {{ repo_source }}
+{% endif %}

@@ -1,0 +1,33 @@
+# Подготовка Proxmox для управления через Terraform
+
+- name: Install required tools on Proxmox server
+  ansible.builtin.apt:
+    name: libguestfs-tools
+
+- name: Configure Proxmox roles
+  proxmoproxmox_terraform_role:
+    name      : "{{ proxmox_terraform_role.name }}"
+    privileges: "{{ proxmox_terraform_role.privileges }}"
+    state     : present
+
+- name: Configure Proxmox user accounts
+  proxmoproxmox_terraform_user:
+    name  : "{{ proxmox_terraform_user }}"
+    state : present
+  register: _new_user 
+
+- name: Configure Proxmox ACLs
+  proxmox_acl:
+    path  : /
+    roles : [ "{{ proxmox_terraform_role.name }}" ]
+    users : [ "{{ proxmox_terraform_user }}" ]
+    state : present
+
+# FIXME: Создание токена для пользователя proxmox и запись его в файл
+# - name: Create Proxmox Token
+#  ansible.builtin.import_tasks: tasks/proxmoproxmox_terraform_user_token.yml
+#
+# - name: Write API token to "{{ x_token_file }}"
+#
+
+

@@ -1,0 +1,70 @@
+---
+# Проброс GPU Nvidia внутрь LXC контейнера Proxmox
+   
+- name: Настройка параметров LXC контейнера
+  delegate_to: "{{ proxmox_node }}"
+  block: 
+  
+  - name: Определяем мажорный номер nvidia0
+    ansible.builtin.shell: set -o pipefail && ls -al /dev/nvidia0 | grep -Po '\d+(?=,)'
+    args:
+      executable: /bin/bash
+    register: _maj_nvidia0
+    changed_when: false
+
+  - name: Определяем мажорный номер nvidia-uvm
+    ansible.builtin.shell: set -o pipefail && ls -al /dev/nvidia-uvm | grep -Po '\d+(?=,)'
+    args:
+      executable: /bin/bash
+    register: _maj_nvidia_uvm
+    changed_when: false
+
+  - name: Конфигурирование контейнера
+    ansible.builtin.lineinfile:
+      path: /etc/pve/lxc/{{ proxmox_vmid }}.conf
+      line: "{{ item }}"
+      state: present
+    loop:
+        - "lxc.cgroup2.devices.allow: c {{ _maj_nvidia0.stdout }}:* rwm"
+        - "lxc.cgroup2.devices.allow: c {{ _maj_nvidia_uvm.stdout }}:* rwm"
+        - "lxc.mount.entry: /dev/nvidia0 dev/nvidia0 none bind,optional,create=file"
+        - "lxc.mount.entry: /dev/nvidiactl dev/nvidiactl none bind,optional,create=file"
+        - "lxc.mount.entry: /dev/nvidia-uvm dev/nvidia-uvm none bind,optional,create=file"
+        - "lxc.mount.entry: /dev/nvidia-uvm-tools dev/nvidia-uvm-tools none bind,optional,create=file"
+    register: _proxmox_lxc_conf
+  
+
+
+- name: Reboot LXC if LXC config changed
+  when: _proxmox_lxc_conf is changed
+  ansible.builtin.reboot:
+    reboot_timeout: 300
+
+
+- name: Install Nvidia driver
+  ansible.builtin.include_role:
+    name: nvidia
+  vars:
+    nvidia_package:
+      - libnvcuvid1 
+      - libnvidia-encode1 
+      - nvidia-smi 
+      - linux-headers-amd64 
+      - nvidia-driver-bin
+      - nvtop
+  
+- name: Добавление модулей Nvidia в черный список
+  ansible.builtin.copy:
+    content: |
+      blacklist nvidia
+      blacklist nvidia_uvm
+      blacklist nvidia_modeset
+      blacklist nvidia_drm 
+    dest  : /etc/modprobe.d/blacklist-nvidia.conf
+    owner : root
+    group : root
+    mode  : 0644
+
+
+  
+  

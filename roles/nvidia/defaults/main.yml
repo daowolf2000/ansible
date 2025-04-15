@@ -1,0 +1,6 @@
+nvidia_package:
+  - nvidia-driver
+  - nvtop
+
+
+nvidia_ctk_no_cgroups: false
