@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  jupyter:
+    image: {{ image | default('quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04') }}
+    ports:
+      - "{{ port | default('8888') }}:8888"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+    command: start-notebook.sh --NotebookApp.token=''
+    environment:
+      - RESTARTABLE=yes
+      {% if gen_cert | default(false) %}
+      - GEN_CERT=yes
+      {% endif %}
+      
