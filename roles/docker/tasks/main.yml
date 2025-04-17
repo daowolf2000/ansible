@@ -9,7 +9,7 @@
   ansible.builtin.shell: |
     source /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}"
   args:
-    executable: /bin/bash  
+    executable: /bin/bash
   changed_when: false
   register: _os_codename
 
@@ -21,27 +21,27 @@
     repo_extra:   "arch={{ _deb_arch.stdout }}"
     repo_source:  "https://download.docker.com/linux/{{ docker_distro_map[ansible_distribution] }} {{ _os_codename.stdout }} stable"
     repo_key_url: "https://download.docker.com/linux/debian/gpg"
-    repo_key_dearmor: yes
+    repo_key_dearmor: true
 
 - name: Install Docker Engine and related packages
   ansible.builtin.apt:
     name  : "{{ docker_package }}"
     state : present
-  become: yes
+  become: true
 
 - name: Enable Docker to start at boot
   ansible.builtin.systemd:
     name    : docker
     enabled : true
     state   : started
-  become: yes
+  become: true
 
 - name: Add user to the docker group
   ansible.builtin.user:
     name    : "{{ docker_user }}"
     groups  : docker
-    append  : yes
-  become: yes
+    append  : true
+  become: true
 
 # - name: Test Docker installation
 #   ansible.builtin.command: |
