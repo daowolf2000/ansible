@@ -1,23 +1,29 @@
 ---
+- name: Check required variables is defined
+  ansible.builtin.assert:
+    that:
+      - compose_app_yml is defined
+    fail_msg: compose_app_yml is undefined
+
 - name: Create folder "{{ compose_app_path }}"
   ansible.builtin.file:
     path  : "{{ compose_app_path }}"
     owner : "{{ compose_app_user }}"
     group : "{{ compose_app_group }}"
     state : directory
-    mode  : 0750
+    mode  : "0750"
 
-- name: Install Docker
-  ansible.builtin.include_role:
-    docker
-  vars:
-    docker_user: "{{ compose_app_user }}"
+# - name: Install Docker
+#   ansible.builtin.include_role:
+#     docker
+#   vars:
+#     docker_user: "{{ compose_app_user }}"
 
 - name: Copy docker-compose.yml
   ansible.builtin.copy:
     content: "{{ compose_app_yml }}"
     dest: "{{ compose_app_path }}/docker-compose.yml"
-    mode: 0644
+    mode: "0644"
 
     # - name: Клонируем папку на целевой сервер
     #   synchronize:
@@ -42,17 +48,16 @@
     dest: "/etc/systemd/system/{{ compose_app_name }}.service"
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
   register: _service
 
 - name: Reload systemd daemon
   when: _service is changed
   ansible.builtin.systemd:
-    daemon_reload: yes
-    
+    daemon_reload: true
+
 - name: Start and enable the {{ compose_app_name }}.service
   ansible.builtin.systemd:
     name: "{{ compose_app_name }}"
-    enabled: yes
-    state: started
-  
+    enabled: true
+    state: "{{ compose_app_state }}"

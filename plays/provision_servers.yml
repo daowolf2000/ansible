@@ -1,0 +1,24 @@
+---
+- ansible.builtin.import_playbook: prepare_template_base-gpu.yml
+
+- name: Provision servers
+  hosts: "{{ proxmox_node | default(lookup('env', 'PROXMOX_NODE')) }}"
+  gather_facts: false
+
+  tasks:
+
+    - name: Provision LXC
+      ansible.builtin.include_role:
+        name: proxmox_lxc
+        tasks_from: provision_lxc.yml
+      vars:
+        proxmox_lxc_hostname  : "{{ item.name }}"
+        proxmox_lxc_options   : "{{ item.opts }}"
+      loop:
+        - name: jupyter
+          opts:
+            clone : base-gpu
+            memory: 4086
+            swap  : 2048
+            mounts:
+              mp0: "/mnt/lab,mp=/mnt/lab"

@@ -1,0 +1,39 @@
+---
+- name: Update /etc/hosts on {{ target | default('localhost') }}
+  hosts: "{{ target | default('localhost') }}"
+  gather_facts: false
+
+  tasks:
+
+    - name: Get VM info from "{{ proxmox_node }}"
+      community.general.proxmox_vm_info:
+        node        : "{{ proxmox_node | default(lookup('env', 'PROXMOX_NODE')) }}"
+        api_host    : "{{ lookup('env', 'PROXMOX_API_HOST') }}"
+        api_user    : "{{ lookup('env', 'PROXMOX_USERNAME') }}"
+        api_password: "{{ lookup('env', 'PROXMOX_PASSWORD') }}"
+        validate_certs: false
+        network: true
+      register: vm_info
+
+    - name: Debug
+      ansible.builtin.debug:
+        var: vm_info
+        verbosity: 1
+
+    - name: Update /etc/hosts on localhost {{ target | default('localhost') }}
+      when:
+        - vm_info.proxmox_vms is defined
+        - vm_info.proxmox_vms | length > 0
+      ansible.builtin.blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} ANSIBLE: VMs from {{ proxmox_node | default(lookup('env', 'PROXMOX_NODE')) }}"
+        block: |
+          {% for vm in vm_info.proxmox_vms %}
+          {% if vm.network != none %}
+          {% for net in vm.network if net.name == 'eth0' %}
+          {{ '%-16s' % net.inet.split('/')[0] }} {{ vm.name }}
+          {% endfor %}
+          {% endif%}
+          {% endfor %}
+      become: true
+      delegate_to: "{{ target | default('localhost') }}"

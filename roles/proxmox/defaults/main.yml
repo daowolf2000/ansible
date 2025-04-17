@@ -9,19 +9,19 @@ proxmox_wait_sec  : 15    # Время ожидания запуска/оста�
 proxmox_terraform_user: "terraform@pve"
 proxmox_terraform_role:
   name: Terraform
-  privileges: 
-    - "Datastore.AllocateSpace" 
-    - "Datastore.Audit" 
+  privileges:
+    - "Datastore.AllocateSpace"
+    - "Datastore.Audit"
     - "Pool.Allocate"
-    - "Sys.Audit" 
-    - "Sys.Console" 
+    - "Sys.Audit"
+    - "Sys.Console"
     - "Sys.Modify"
     - "VM.Allocate"
     - "VM.Audit"
     - "VM.Clone"
     - "VM.Config.CDROM"
-    - "VM.Config.Cloudinit" 
-    - "VM.Config.CPU" 
+    - "VM.Config.Cloudinit"
+    - "VM.Config.CPU"
     - "VM.Config.Disk"
     - "VM.Config.HWType"
     - "VM.Config.Memory"
@@ -31,3 +31,6 @@ proxmox_terraform_role:
     - "VM.Monitor"
     - "VM.PowerMgmt"
     - "SDN.Use"
+
+proxmox_lxc_hostname: "{{ omit }}"
+proxmox_lxc_options : {}

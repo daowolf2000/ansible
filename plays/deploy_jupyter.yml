@@ -1,0 +1,38 @@
+- name: Deploy Jupyter Notebook
+  hosts: "{{ target | default('localhost') }}"
+  gather_facts: false
+  vars:
+    x_image : quay.io/jupyter/pytorch-notebook:cuda12-ubuntu-24.04
+    x_port  : 8888
+    x_volume: ./notebooks
+    x_gen_cert: false
+    x_user  : "{{ ansbile_user_id }}"
+
+
+  roles:
+
+    - role: user
+      vars:
+        user_name: "{{ x_user }}"
+        
+    - role: docker
+      vars:
+        docker_user: "{{ x_user }}"
+
+    - role: compose_app # noqa yaml[indentation]
+      vars:
+        compose_app_name: jupyter
+        compose_app_user: "{{ x_user }}"
+        compose_app_yml: |
+          version: '3.8'
+          services:
+            jupyter:
+              image: {{ x_image }}
+              ports:
+                - "{{ x_port }}:8888"
+              volumes:
+                - {{ x_volume }}:/home/jovyan/work
+              command: start-notebook.sh --NotebookApp.token=''
+              environment:
+                - RESTARTABLE=yes
+                - GEN_CERT={{ x_gen_cert }}

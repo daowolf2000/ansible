@@ -1,0 +1,59 @@
+---
+- name: Check exists {{ proxmox_lxc_hostname }}
+  community.general.proxmox_vm_info: &proxmox_conn
+    node        : "{{ proxmox_node | default(lookup('env', 'PROXMOX_NODE')) }}"
+    api_host    : "{{ lookup('env', 'PROXMOX_API_HOST') }}"
+    api_user    : "{{ lookup('env', 'PROXMOX_USERNAME') }}"
+    api_password: "{{ lookup('env', 'PROXMOX_PASSWORD') }}"
+    validate_certs: false
+  register: proxmox_lxc_vm_info
+
+- name: Clone if not exists
+  when:
+    - proxmox_lxc_vm_info is defined
+    - proxmox_lxc_vm_info | length = 0
+  block:
+    - name: Clone LXC
+      when: proxmox_lxc_clone is defined
+      block:
+        - name: Get vmid template {{ proxmox_lxc_clone }}
+
+        - name: Check template exists
+
+        - name: Clone LXC from {{ proxmox_lxc_clone }} to {{ proxmox_lxc_hostname }}
+
+
+    - name: Create LXC {{ proxmox_lxc_hostname }}
+      when: not proxmox_lxc_clone is defined
+      community.general.proxmox: &proxmox_lxc
+        <<: *proxmox_conn
+        hostname    : "{{ proxmox_lxc_hostname }}"
+        description : "{{ opt.description }}"
+        tags        : "{{ opt.tags }}"
+
+        ostemplate  : "{{ opt.ostemplate }}"
+        hookscript  : "{{ opt.hookscript }}"
+        unprivileged: "{{ opt.unprivileged }}"
+        onboot      : "{{ opt.onboot }}"
+
+        password    : "{{ opt.password }}"
+        pubkey      : "{{ opt.pubkey }}"
+
+        pool        : "{{ opt.pool }}"
+        cpus        : "{{ opt.cpus }}"
+        cores       : "{{ opt.cores }}"
+        cpuunits    : "{{ opt.cpuunits }}"
+        memory      : "{{ opt.memory }}"
+        swap        : "{{ opt.swap }}"
+        disk        : "{{ opt.disk }}"
+        mounts      : "{{ opt.mounts }}"
+        netif       : "{{ opt.netif }}"
+        searchdomain: "{{ opt.searchdomain }}"
+        features    : "{{ opt.features }}"
+      vars:
+        opt: "{{ proxmox_lxc_default | combine(proxmox_lxc) }}"
+
+- name: Update LXC configure
+  when:
+    - proxmox_lxc_vm_info is defined
+    - proxmox_lxc_vm_info | length = 0

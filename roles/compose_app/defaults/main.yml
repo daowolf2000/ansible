@@ -1,9 +1,10 @@
-compose_app_name  : "{{ undef(hint='You must specify name app') }}" 
-compose_app_yml   : "{{ undef(hint='You must specify content of docker-compose.yml') }}"  
+compose_app_name  : "{{ undef(hint='You must specify name app') }}"
+compose_app_state : "started"
+compose_app_yml   : "{{ undef(hint='You must specify content of docker-compose.yml') }}"
 
-compose_app_path  : "{{ ansible_user_dir }}/{{ compose_app_name }}" 
+compose_app_path  : "{{ ansible_user_dir }}/{{ compose_app_name }}"
 compose_app_user  : "{{ ansible_user_uid }}"
 compose_app_group : "{{ ansible_user_gid }}"
 
 # Путь к каталогу c настройками
-compose_app_conf  : "{{ default(omit) }}"
+compose_app_conf  : "{{ omit }}"

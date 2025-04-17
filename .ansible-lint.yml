@@ -1,3 +1,5 @@
 skip_list:
 - no-handler
+- name[play]
 - name[template]
+- yaml[colons]

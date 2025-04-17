@@ -1,0 +1,23 @@
+proxmox_lxc_default:
+  description : "{{ omit }}"
+  tags        : []
+  ostemplate  : "{{ omit }}"
+  hookscript  : "{{ omit }}"
+  unprivileged: true
+  onboot      : "{{ omit }}"
+
+  password    : "{{ omit }}"
+  pubkey      : "{{ omit }}"
+
+
+  pool        : "{{ omit }}"
+  cpus        : "{{ omit }}"
+  cores       : "{{ omit }}"
+  cpuunits    : "{{ omit }}"
+  memory      : "{{ omit }}"
+  swap        : "{{ omit }}"
+  disk        : "{{ omit }}"
+  mounts      : "{{ omit }}" # dict
+  netif       : "{{ omit }}" # dict
+  searchdomain: "{{ omit }}"
+  features    : "{{ omit }}" # list[]
