@@ -1,0 +1,115 @@
+---
+- name: Check exists 
+  community.general.proxmox_vm_info: &proxmox_get_info
+    node        : "{{ lookup('env', 'PROXMOX_NODE') }}"
+    api_host    : "{{ lookup('env', 'PROXMOX_API_HOST') }}"
+    api_user    : "{{ lookup('env', 'PROXMOX_USERNAME') }}"
+    api_password: "{{ lookup('env', 'PROXMOX_PASSWORD') }}"
+    validate_certs: false
+    vmid        : "{{ proxmox_lxc.vmid | default(omit) }}"
+    name        : "{{ proxmox_lxc.hostname | default(omit) }}"
+  register: check_vm_exists
+
+- name: Debug
+  ansible.builtin.debug:
+    var: check_vm_exists
+    verbosity: 1
+
+- name: If not exists
+  when:
+    - check_vm_exists is defined
+    - check_vm_exists.proxmox_vms | length == 0
+  block:
+
+    - name: Create LXC {{ proxmox_lxc.hostname }}
+      when: not proxmox_lxc.clone is defined
+      community.general.proxmox: &proxmox_lxc
+        node        : "{{ proxmox_node | default(lookup('env', 'PROXMOX_NODE')) }}"
+        api_host    : "{{ lookup('env', 'PROXMOX_API_HOST') }}"
+        api_user    : "{{ lookup('env', 'PROXMOX_USERNAME') }}"
+        api_password: "{{ lookup('env', 'PROXMOX_PASSWORD') }}"
+        
+        hostname    : "{{ proxmox_lxc.hostname }}"
+        description : "{{ opt.description }}"
+        tags        : "{{ opt.tags }}"
+
+        ostemplate  : "{{ opt.ostemplate }}"
+        hookscript  : "{{ opt.hookscript }}"
+        unprivileged: "{{ opt.unprivileged }}"
+        onboot      : "{{ opt.onboot }}"
+
+        password    : "{{ opt.password }}"
+        pubkey      : "{{ opt.pubkey }}"
+
+        pool        : "{{ opt.pool }}"
+        cpus        : "{{ opt.cpus }}"
+        cores       : "{{ opt.cores }}"
+        cpuunits    : "{{ opt.cpuunits }}"
+        memory      : "{{ opt.memory }}"
+        swap        : "{{ opt.swap }}"
+        disk        : "{{ opt.disk }}"
+        mounts      : "{{ opt.mounts }}"
+        netif       : "{{ opt.netif }}"
+        searchdomain: "{{ opt.searchdomain }}"
+        features    : "{{ opt.features }}"
+        update      : true
+      vars:
+        opt: "{{ proxmox_lxc_default | combine(proxmox_lxc) }}"
+      register: res
+
+    - name: Debug
+      ansible.builtin.debug:
+        var: res
+        verbosity: 1
+
+    - name: Clone LXC
+      when: proxmox_lxc.clone is defined
+      block:
+        - name: Get vmid template {{ proxmox_lxc.clone }}
+          community.general.proxmox_vm_info:
+            <<: *proxmox_get_info
+            name: "{{ proxmox_lxc.clone }}"
+          register: template_info  
+
+        - name: Debug
+          ansible.builtin.debug:
+            var: template_info
+            verbosity: 1
+
+        - name: Check template exists
+          ansible.builtin.assert:
+            that:
+              - template_info.proxmox_vms is defined
+              - template_info.proxmox_vms | length > 0
+            fail_msg: "Tempalate {{ proxmox_lxc.clone }} not exists"
+
+        - name: Clone LXC from {{ proxmox_lxc.clone }} to {{ proxmox_lxc.hostname }}
+          community.general.proxmox:
+            <<: *proxmox_lxc
+            clone: "{{ template_info.proxmox_vms[0].vmid }}"
+          vars:
+            opt: "{{ proxmox_lxc_default | combine(proxmox_lxc) }}"
+          register: res
+                
+        - name: Debug
+          ansible.builtin.debug:
+            var: res
+            verbosity: 1
+
+- name: Update LXC configure
+  when:
+    - proxmox_lxc_update_force 
+    - check_vm_exists is defined
+    - check_vm_exists.proxmox_vms | length > 0
+  community.general.proxmox:
+    <<: *proxmox_lxc
+    clone: "{{ omit }}"
+    update: true
+  vars:
+    opt: "{{ proxmox_lxc_default | combine(proxmox_lxc) }}"
+  register: res
+                
+- name: Debug
+  ansible.builtin.debug:
+    var: res
+    verbosity: 1

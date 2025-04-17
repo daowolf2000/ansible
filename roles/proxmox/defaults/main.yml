@@ -1,7 +1,7 @@
-proxmox_node        : "{{ default(lookup('env', 'PROXMOX_NODE')) }}"
-proxmox_api_host    : "{{ default(lookup('env', 'PROXMOX_API_HOST')) }}"
-proxmox_api_user    : "{{ default(lookup('env', 'PROXMOX_USERNAME')) }}"
-proxmox_api_pass    : "{{ default(lookup('env', 'PROXMOX_PASSWORD')) }}"
+proxmox_node        : "{{ lookup('env', 'PROXMOX_NODE') }}"
+proxmox_api_host    : "{{ lookup('env', 'PROXMOX_API_HOST') }}"
+proxmox_api_user    : "{{ lookup('env', 'PROXMOX_USERNAME') }}"
+proxmox_api_pass    : "{{ lookup('env', 'PROXMOX_PASSWORD') }}"
 
 proxmox_wait_sec  : 15    # Время ожидания запуска/остановки VM и LXC
 
@@ -32,5 +32,6 @@ proxmox_terraform_role:
     - "VM.PowerMgmt"
     - "SDN.Use"
 
-proxmox_lxc_hostname: "{{ omit }}"
-proxmox_lxc_options : {}
+# proxmox_lxc_hostname: "{{ omit }}"
+proxmox_lxc : {}
+proxmox_lxc_update_force: false

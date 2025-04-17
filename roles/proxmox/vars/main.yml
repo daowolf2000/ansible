@@ -1,4 +1,6 @@
 proxmox_lxc_default:
+  hostname    : "{{ omit }}"
+  clone       : "{{ omit }}"
   description : "{{ omit }}"
   tags        : []
   ostemplate  : "{{ omit }}"
