@@ -1,0 +1,1 @@
+security_deny_double_logon: false   # Запретить двойной вход пользователя

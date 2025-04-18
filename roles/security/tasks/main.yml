@@ -1,0 +1,4 @@
+---
+
+- name: Deny double logon ({{ security_deny_double_logon }})
+  ansible.builtin.import_tasks: deny_double_logon.yml
