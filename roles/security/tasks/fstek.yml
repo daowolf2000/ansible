@@ -1,0 +1,34 @@
+---
+- name: Copy grub config
+  when: security_fstek | bool
+  ansible.builtin.template:
+    src:    etc/default/grub.d/fstek.cfg.j2
+    dest:   /etc/default/grub.d/fstek.cfg
+    owner:  root
+    group:  root
+    mode:   "0644"
+  notify: make grub
+
+- name: Delete grub config
+  when: not security_fstek | bool
+  ansible.builtin.file:
+    path:   /etc/default/grub.d/fstek.cfg
+    state:  absent
+  notify: make grub
+
+- name: Copy sysctl config
+  when: security_fstek | bool
+  ansible.builtin.template:
+    src:    etc/sysctl.d/90-fstek.conf.j2
+    dest:   /etc/sysctl.d/90-fstek.conf
+    owner:  root
+    group:  root
+    mode:   "0644"
+  notify: Reload sysctl
+
+- name: Delete grub config
+  when: not security_fstek | bool
+  ansible.builtin.file:
+    path:   /etc/sysctl.d/90-fstek.conf
+    state:  absent
+  notify: Reload sysctl
