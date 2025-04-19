@@ -6,7 +6,7 @@
 
 - name: Configure zabbix-agent
   ansible.builtin.template:
-    src:    zabbix_agentd.conf.j2
+    src:    zbx_agent/zabbix_agentd.conf.j2
     dest:   /etc/zabbix/zabbix_agentd.conf
     owner:  root
     group:  root

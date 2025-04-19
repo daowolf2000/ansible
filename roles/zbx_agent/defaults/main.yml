@@ -1,5 +1,0 @@
-zbx_agent_debug         : 3
-zbx_agent_port          : 10050
-zbx_agent_server        : "{{ zbx_srv_ip | default('127.0.0.1') }}"
-zbx_agent_server_active : "{{ zbx_agent_server }}"
-zbx_agent_hostname      : system.hostname[shorthost,lower]
