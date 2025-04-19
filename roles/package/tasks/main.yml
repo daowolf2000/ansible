@@ -1,0 +1,22 @@
+---
+
+- name: Add non-free repo в sources.list
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list
+    regexp: '^(deb .* {{ ansible_distribution_release }} main).*$'
+    replace: '\1 {{ package_repo }}'
+  register: _repo_changed
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+  when: _repo_changed is changed 
+
+- name: Install base package
+  ansible.builtin.apt:
+    name: "{{ package_base }}"
+
+- name: Install extra package
+  ansible.builtin.apt:
+    name: "{{ package_extra }}"
+
