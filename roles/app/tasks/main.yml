@@ -2,4 +2,4 @@
 
 - name: Install apps}
   ansible.builtin.include_tasks: "{{ item }}.yml"
-  loop: "{{ app_list }}"
+  loop: "{{ app_list_all + app_list_group + app_list_host }}"

@@ -57,8 +57,12 @@
   register: result
   failed_when: false
 
+- name: Check Nvidia present
+  ansible.builtin.include_role:
+    name: _func
+    tasks_from: check_nvidia_present
 
 - name: Установка Nvidia Container Toolkit
+  when: nvidia_present
   ansible.builtin.include_tasks: ctk_install.yml 
-  when: result.stdout != ""
   

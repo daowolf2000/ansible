@@ -1,2 +1,4 @@
-app_list: []
+app_list_all    : []
+app_list_group  : []
+app_list_host   : []
 
