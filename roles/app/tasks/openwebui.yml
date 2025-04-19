@@ -1,0 +1,11 @@
+---
+- name: Check Nvidia present
+  ansible.builtin.include_role:
+    name: _func
+    tasks_from: check_nvidia_present
+
+- name: Install Open-WebUI
+  ansible.builtin.include_tasks: _compose_app.yml
+  vars:
+    x_name: openwebui
+    x_user: "{{ app_openwebui_user }}"

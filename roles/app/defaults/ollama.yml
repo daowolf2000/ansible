@@ -1,0 +1,2 @@
+app_ollama_force  : "{{ x_force | default(false) }}"                                          # Принудительная установка / обновление
+app_ollama_version: "{% if x_version is defined %}OLLAMA_VERSION={{ x_version }}{% endif %}"  # Указание конкретной версии Ollama

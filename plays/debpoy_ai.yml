@@ -1,0 +1,17 @@
+- name: Deploy server ai
+  hosts: ai
+
+  roles:
+    - package
+    - user
+
+  post_tasks:
+
+    - name: Установка Open-WebUI
+      ansible.builtin.include_tasks: 
+        file: install_openwebui.yml
+
+    - name: Установка Ollama
+      ansible.builtin.include_tasks:
+        file: install_ollama.yml
+

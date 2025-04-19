@@ -1,0 +1,9 @@
+---
+- name: Run task {{ task }} on {{ target }}
+  hosts: "{{ target }}"
+  
+  tasks:
+
+    - ansible.builtin.import_tasks: "{{ task }}"
+
+      

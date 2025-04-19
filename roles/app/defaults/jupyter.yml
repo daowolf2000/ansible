@@ -1,0 +1,6 @@
+app_jupyter_image     : "pytorch-notebook:cuda12-ubuntu-24.04"
+app_jupyter_port      : 8888'
+app_jupyter_notebook  : ./notebooks
+app_jupyter_gen_cert  : false
+app_jupyter_user      : "{{ ansible_user_id }}"
+app_jupyter_token     : "{{ omit }}"

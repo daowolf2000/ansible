@@ -1,0 +1,6 @@
+---
+- name: Install Jupyter
+  ansible.builtin.include_tasks: _compose_app.yml
+  vars:
+    x_name: jupyter
+    x_user: "{{ app_jupyter_user }}"

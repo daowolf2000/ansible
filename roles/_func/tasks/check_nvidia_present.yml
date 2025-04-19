@@ -1,0 +1,11 @@
+
+- name: Проверить наличие карты NVIDIA
+  ansible.builtin.shell: |
+    set -o pipefail ; lspci | grep -i nvidia
+  changed_when: false
+  register: result
+  failed_when: false
+
+- name: Установка Nvidia Container Toolkit
+  ansible.builtin.set_fact:
+    nvidia: "{{ true if result.stdout != '' else false }}"

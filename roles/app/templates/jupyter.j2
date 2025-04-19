@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+jupyter:
+    image: quay.io/jupyter/{{ app_jupyter_image }}
+    ports:
+    - "{{ app_jupyter_port }}:8888"
+    volumes:
+    - {{ app_jupyter_notebook }}:/home/jovyan/work
+    command: start-notebook.sh --NotebookApp.token='{% if app_jupyter_token %}'{{ app_jupyter_token }}'{% else %}''{% endif %}
+    environment:
+    - RESTARTABLE=yes
+    - GEN_CERT={{ app_jupyter_gen_cert | string }}

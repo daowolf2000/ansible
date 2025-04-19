@@ -1,0 +1,43 @@
+- name: Подготовка базового шаблона base-gpu
+  hosts: base-gpu
+  vars:
+    username: dw
+    uid     : 3000
+    password: "{{ lookup('env','DEFAULT_PASSWORD') }}"
+  tasks:
+
+    - name: Установка ПО
+      ansible.builtin.include_role:
+        name: package
+
+    - name: Создание пользователей
+      ansible.builtin.include_role:
+        name: user
+
+
+
+
+
+    - name: Проброс GPU
+      ansible.builtin.include_role:
+        name: proxmox
+        tasks_from: lxc_nvidia_passthru
+
+    - name: Установка Docker
+      ansible.builtin.include_role:
+        name: docker
+
+    - name: Установка Nvidia CTK
+      ansible.builtin.include_role:
+        name: nvidia
+        tasks_from: ctk_install
+      vars:
+        nvidia_ctk_no_cgroups: "true"
+
+    - name: Создаем пользователя
+      ansible.builtin.user:
+        name: "{{ username }}"
+        uid: "{{ uid }}"
+        password: "{{ password }}"
+        groups: docker
+        append: true
