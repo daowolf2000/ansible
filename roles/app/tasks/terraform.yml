@@ -1,0 +1,76 @@
+---
+- name: Check terraform install and version
+  ansible.builtin.shell: |
+    set -o pipefail && terraform version -json | grep -o '"terraform_version": "[^"]*"' | cut -d '"' -f4'
+  args:
+    executable: /bin/bash
+  changed_when: false
+  failed_when: false
+  register: app_terraform_cur_ver
+
+- name: Debug (check version)
+  ansible.builtin.debug:
+    msg: "Current version: {{ app_terraform_cur_ver.stdout | default('none') }}, Required version: {{ app_terraform_ver }}. Need update: {{ app_terraform_cur_ver.stdout != app_terraform_ver }}"
+    verbosity: 1
+
+- name: Install Terraform
+  when: app_terraform_cur_ver is failed or app_terraform_cur_ver.stdout != app_terraform_ver
+  block:
+    - name: Download hash file
+      ansible.builtin.get_url:
+        url   : "{{ app_terraform_repo }}/{{ app_terraform_ver }}/terraform_{{ app_terraform_ver }}_SHA256SUMS"
+        dest  : /tmp/terraform_{{ app_terraform_ver }}_SHA256SUMS
+        mode  : '0644'
+
+    - name: Get hash sum
+      ansible.builtin.shell: |
+        set -o pipefail ; grep terraform_{{ app_terraform_ver }}_{{ app_terraform_arch }}.zip /tmp/terraform_1.11.3_SHA256SUMS | awk '{print $1}'
+      args:
+        executable: /bin/bash
+      changed_when: false
+      register: x_hash_sum
+
+    - name: Download Terraform binary
+      ansible.builtin.get_url:
+        url     : "{{ app_terraform_repo }}/{{ app_terraform_ver }}/terraform_{{ app_terraform_ver }}_{{ app_terraform_arch }}.zip"
+        dest    : /tmp/terraform_{{ app_terraform_ver }}_{{ app_terraform_arch }}.zip
+        mode    : '0644'
+        checksum: "sha256:{{ x_hash_sum.stdout }}"
+
+    - name: Unzip Terraform archive
+      ansible.builtin.unarchive:
+        src       : /tmp/terraform_{{ app_terraform_ver }}_{{ app_terraform_arch }}.zip
+        dest      : "{{ app_terraform_path }}"
+        mode      : '0755'
+        remote_src: yes
+      become: yes
+
+    - name: Delete temp file
+      ansible.builtin.file:
+        path  : "/tmp/terraform_{{ app_terraform_ver }}*"
+        state : absent
+
+
+- name: Configure Terraform for {{ app_terraform_user }}
+  block:
+    - name: Get getent for "{{ app_terraform_user }}"
+      ansible.builtin.getent: 
+        database: passwd
+        key     : "{{ app_terraform_user }}"
+        split   : ":"
+
+    - name: Get home dir
+      ansible.builtin.set_fact:
+        app_terraform_home: "{{ getent_passwd[app_terraform_user][4] }}"
+
+    - name: Install autocomplete
+      ansible.builtin.lineinfile:
+        path: "{{ app_terraform_home }}/.bashrc"
+        line: "complete -C {{ app_terraform_path }}/terraform terraform"
+      when: app_terraform_autocomplete
+
+    - name: Configure mirror for terraform
+      ansible.builtin.template:
+        src : terraform/.terraformrc.j2
+        dest: "{{ app_terraform_home }}/.terraformrc"
+        mode: '0644'

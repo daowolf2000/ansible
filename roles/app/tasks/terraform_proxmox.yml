@@ -1,22 +1,22 @@
 ---
-- name: Get getent for "{{ terraform_user }}"
+- name: Get getent for "{{ app_terraform_user }}"
   ansible.builtin.getent: 
     database: passwd
-    key     : "{{ terraform_user }}"
+    key     : "{{ app_terraform_user }}"
     split   : ":"
 
 - name: Get home dir
   ansible.builtin.set_fact:
-    terraform_home: "{{ getent_passwd[terraform_user][4] }}"
+    app_terraform_home: "{{ getent_passwd[app_terraform_user][4] }}"
 
-- name: Set terraform_proxmox_plugin_dir
+- name: Set app_terraform_proxmox_plugin_dir
   ansible.builtin.set_fact:
-    terraform_proxmox_plugin_dir: "{{ terraform_home }}/.terraform.d/plugins/registry.terraform.io/telmate/proxmox/{{ terraform_proxmox_ver }}/{{ terraform_arch }}"
+    app_terraform_proxmox_plugin_dir: "{{ app_terraform_home }}/.terraform.d/plugins/registry.terraform.io/telmate/proxmox/{{ app_terraform_proxmox_ver }}/{{ app_terraform_arch }}"
 
 # FIX: Добавить проверку версии плагина
 - name: Check provider install
   ansible.builtin.stat: 
-    path:   "{{ terraform_proxmox_plugin_dir }}/terraform-provider-proxmox"
+    path:   "{{ app_terraform_proxmox_plugin_dir }}/terraform-provider-proxmox"
   register: _proxmox_provider
 
 - name: Install provider
@@ -25,7 +25,7 @@
 
   - name: Create directory for repo
     ansible.builtin.file: 
-      path:   "{{ terraform_proxmox_plugin_dir }}"
+      path:   "{{ app_terraform_proxmox_plugin_dir }}"
       state:  directory
       mode:   0755
 
@@ -36,9 +36,9 @@
 
   - name: Clone from git
     ansible.builtin.git:
-      repo: "{{ terraform_proxmox_repo }}"
+      repo: "{{ app_terraform_proxmox_repo }}"
       dest: "/tmp/terraform-provider-proxmox"
-      version: "v{{ terraform_proxmox_ver }}"
+      version: "v{{ app_terraform_proxmox_ver }}"
       update: yes
 
   - name: Run the Makefile
@@ -47,14 +47,14 @@
 
   - name: Create Terraform plugins directory
     ansible.builtin.file: 
-      path:   "{{ terraform_proxmox_plugin_dir }}"
+      path:   "{{ app_terraform_proxmox_plugin_dir }}"
       state:  directory
       mode:   0755
 
   - name: Copy plugin for Proxmox
     ansible.builtin.copy:
       src:  "/tmp/terraform-provider-proxmox/bin/terraform-provider-proxmox" 
-      dest: "{{ terraform_proxmox_plugin_dir }}"
+      dest: "{{ app_terraform_proxmox_plugin_dir }}"
       mode: 0755
 
   - name: Delete temp folders

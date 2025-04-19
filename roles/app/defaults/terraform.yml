@@ -1,0 +1,7 @@
+app_terraform_path    : "/usr/local/bin"
+app_terraform_repo    : "https://hashicorp-releases.yandexcloud.net/terraform"
+app_terraform_arch    : "linux_amd64"
+app_terraform_ver     : "1.11.3"
+app_terraform_user    : "{{ ansible_user_id }}"
+app_terraform_mirror  : "https://terraform-mirror.yandexcloud.net/"
+app_terraform_autocomplete: yes 
