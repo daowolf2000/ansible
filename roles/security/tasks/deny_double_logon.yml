@@ -6,6 +6,7 @@
     owner:  root
     group:  root
     mode:   "0755"
+  become: true
 
 - name: Config profile
   ansible.builtin.lineinfile:
@@ -15,3 +16,4 @@
     group:  root
     mode:   "0644"
     state: "{{ 'present' if security_deny_double_logon else 'absent' }}"
+  become: true
