@@ -13,7 +13,9 @@
 
 - name: Install Nvidia package
   ansible.builtin.apt:
-    name: "{{ nvidia_package }}"
+    name: 
+      - nvidia-driver
+      - nvtop
 
 - name: Add nouveau to blacklist
   ansible.builtin.copy:
