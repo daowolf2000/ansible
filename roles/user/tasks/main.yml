@@ -1,0 +1,34 @@
+- name: Config primary group
+  ansible.builtin.group: # noqa jinja[spacing]
+    state : "{{ item.state  | default('present')  }}"
+    name  : "{{ item.name                         }}"
+    gid   : "{{ item.gid    | default(omit)       }}"
+    system: "{{ item.system | default(False)      }}"
+  loop: "{{ user_config_all + user_config_group + user_config_host }}"
+  tags:
+    - user
+
+- name: Config user
+  ansible.builtin.user: # noqa jinja[spacing]
+    state           : "{{ item.state          | default('present')            }}"
+    name            : "{{ item.name                                           }}"
+    comment         : "{{ item.comment        | default(item.name)            }}"
+    uid             : "{{ item.uid            | default(omit)                 }}"
+    group           : "{{ item.group          | default('nobody')             }}"
+    groups          : "{{ item.groups         | default([]) | join(',')       }}"
+    append          : "{{ item.groups_append  | default(False)                }}"
+    home            : "{{ item.home           | default('/home/' + item.name) }}"
+    createhome      : "{{ item.home_create    | default(True)                 }}"
+    move_home       : "{{ item.home_move      | default(False)                }}"
+    remove          : "{{ item.home_remove    | default(False)                }}"
+    force           : "{{ item.home_force     | default(False)                }}"
+    password        : "{{ item.password       | default('!')                  }}"
+    update_password : "{{ item.password_update| default('on_create')          }}"
+    shell           : "{{ item.shell          | default('/bin/bash')          }}"
+    system          : "{{ item.system         | default(False)                }}"
+  loop: "{{ user_config_all + user_config_group + user_config_host }}"
+  tags:
+    - user
+
+# TODO: Добавить удаление пользователей, которые не определены
+# TODO: Установка ключей в authorized_keys
