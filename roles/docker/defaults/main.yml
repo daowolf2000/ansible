@@ -13,3 +13,6 @@ docker_distro_map:
   Linux Mint: ubuntu
   Ubuntu:     ubuntu
   Debian:     debian
+
+
+docker_ctk_no_cgroups: false

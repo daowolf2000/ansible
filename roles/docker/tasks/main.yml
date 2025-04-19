@@ -49,3 +49,16 @@
 #   register: _test
 #   changed_when: false
 #   failed_when: _test.rc != 0
+
+- name: Проверить наличие карты NVIDIA
+  ansible.builtin.shell: |
+    set -o pipefail ; lspci | grep -i nvidia
+  changed_when: false
+  register: result
+  failed_when: false
+
+
+- name: Установка Nvidia Container Toolkit
+  ansible.builtin.include_tasks: ctk_install.yml 
+  when: result.stdout != ""
+  
